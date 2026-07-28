@@ -1,0 +1,18 @@
+RODRIGOL — ENTREGA 6.1
+
+Correções incluídas:
+- /control redireciona automaticamente para /control/.
+- control.css e control.js usam caminhos absolutos e não geram mais erro 404.
+- painel de controle recebeu apresentação profissional RodriGol.
+- indicador de conexão e diagnóstico foram melhorados.
+- placar do overlay ficou mais largo e responsivo para exibir os dois times e os dois resultados.
+- pasta dist do overlay foi recompilada.
+- testes do OBS Bridge: 4 aprovados.
+- testes do Overlay: 6 aprovados; 1 teste de integração da raiz não pôde ser executado porque este pacote contém somente a pasta apps e não inclui o package.json da raiz.
+
+Instalação:
+1. Feche o servidor RodriGol caso esteja aberto.
+2. Copie a pasta apps deste pacote sobre a pasta apps do projeto.
+3. Confirme a substituição dos arquivos.
+4. Na pasta principal do projeto, execute npm start.
+5. Abra http://127.0.0.1:4173/control (a barra final agora é automática).

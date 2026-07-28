@@ -1,0 +1,4 @@
+import { InvalidArgumentError,ValueObject } from "@rodrigol/core";
+export type TransitionKind="cut"|"fade"|"slide-up"|"slide-down"|"slide-left"|"slide-right";
+export interface TransitionValue{readonly kind:TransitionKind;readonly durationMs:number;}
+export class Transition extends ValueObject<TransitionValue>{private constructor(value:TransitionValue){super(Object.freeze(value));}public static create(kind:TransitionKind,durationMs=300):Transition{if(!Number.isInteger(durationMs)||durationMs<0||durationMs>10000)throw new InvalidArgumentError("A duração da transição é inválida.","INVALID_TRANSITION_DURATION");return new Transition({kind,durationMs});}public static cut():Transition{return Transition.create("cut",0);}public static fade(durationMs=300):Transition{return Transition.create("fade",durationMs);}}

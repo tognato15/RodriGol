@@ -1,0 +1,14 @@
+{
+  "name": "@rodrigol/obs-bridge",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Ponte em tempo real entre o RodriGol e o Browser Overlay/OBS.",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.mjs",
+    "start": "node server.mjs",
+    "build": "node -e \"console.log('OBS Bridge não exige compilação.')\"",
+    "check": "node --check server.mjs && node --check public/control.js",
+    "test": "node --test"
+  }
+}

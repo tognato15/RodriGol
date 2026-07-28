@@ -1,0 +1,15 @@
+{
+  "name": "@rodrigol/browser-overlay",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Aplicação visual do RodriGol para Browser Source do OBS.",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.mjs",
+    "start": "node server.mjs",
+    "build": "node scripts/build.mjs",
+    "check": "node --check public/app.js && node --check server.mjs",
+    "test": "node --test",
+    "clean": "node -e \"const fs=require('node:fs'); fs.rmSync('dist',{recursive:true,force:true});\""
+  }
+}

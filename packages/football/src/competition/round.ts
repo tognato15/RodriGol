@@ -1,0 +1,2 @@
+import { Entity, InvalidArgumentError } from "@rodrigol/core"; import type { RoundId } from "../identity/index.js";
+export class Round extends Entity<RoundId>{private constructor(id:RoundId,public readonly name:string,public readonly number:number){super(id);}public static create(id:RoundId,name:string,number:number):Round{if(!name.trim()||!Number.isInteger(number)||number<1)throw new InvalidArgumentError("Rodada inválida.","INVALID_ROUND");return new Round(id,name.trim(),number);}}

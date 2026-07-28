@@ -1,0 +1,4 @@
+import { InvalidArgumentError } from "@rodrigol/core";
+import type { PlayerId } from "../identity/index.js";
+export interface PlayerStatisticsValue { readonly goals:number; readonly assists:number; readonly shots:number; readonly passes:number; readonly tackles:number; readonly saves:number; readonly minutesPlayed:number; }
+export class PlayerStatistics { private value:PlayerStatisticsValue={goals:0,assists:0,shots:0,passes:0,tackles:0,saves:0,minutesPlayed:0}; public constructor(public readonly playerId:PlayerId){} public update(value:PlayerStatisticsValue):void{if(Object.values(value).some(v=>!Number.isInteger(v)||v<0))throw new InvalidArgumentError("Estatística de jogador inválida.","INVALID_PLAYER_STATISTIC");this.value={...value};} public get snapshot():PlayerStatisticsValue{return {...this.value};} }

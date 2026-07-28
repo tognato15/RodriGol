@@ -1,0 +1,29 @@
+{
+  "name": "rodrigol-2",
+  "version": "0.2.0",
+  "private": true,
+  "description": "RodriGol 2.0 — sistema operacional para cobertura esportiva.",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "check": "npm run check --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "clean": "npm run clean --workspaces --if-present",
+    "dev:overlay": "npm run dev -w @rodrigol/browser-overlay",
+    "start": "npm run start -w @rodrigol/obs-bridge",
+    "preview": "npm run start -w @rodrigol/browser-overlay",
+    "dev:bridge": "npm run dev -w @rodrigol/obs-bridge",
+    "start:overlay": "npm run start -w @rodrigol/browser-overlay"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "devDependencies": {
+    "typescript": "5.8.3"
+  }
+}

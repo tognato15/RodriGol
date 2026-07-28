@@ -1,0 +1,6 @@
+import test from "node:test";import assert from "node:assert/strict";import {readFile} from "node:fs/promises";import {fileURLToPath} from "node:url";
+const root=fileURLToPath(new URL("../",import.meta.url));
+test("bridge oferece websocket, heartbeat e reconexão compatível",async()=>{const server=await readFile(root+"server.mjs","utf8");assert.match(server,/server\.on\("upgrade"/);assert.match(server,/framePing/);assert.match(server,/\/ws/);});
+test("bridge oferece API de comandos e diagnóstico",async()=>{const server=await readFile(root+"server.mjs","utf8");assert.match(server,/\/api\/commands/);assert.match(server,/\/api\/state/);assert.match(server,/\/health/);});
+test("redireciona control sem barra e usa recursos absolutos",async()=>{const server=await readFile(root+"server.mjs","utf8");const html=await readFile(root+"public/index.html","utf8");assert.match(server,/pathname==="\/control"/);assert.match(server,/redirect\(response,"\/control\/"\)/);assert.match(html,/href="\/control\/control\.css"/);assert.match(html,/src="\/control\/control\.js"/);});
+test("inclui painel profissional de operação",async()=>{const html=await readFile(root+"public/index.html","utf8");assert.match(html,/Cabine de Cobertura/);assert.match(html,/OPERAÇÃO RÁPIDA/);assert.match(html,/REGISTRAR E PUBLICAR/);assert.match(html,/OVERLAYS · PREVIEW/);});

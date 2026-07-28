@@ -1,0 +1,1 @@
+export enum PublicationChannel { SCOREBOARD="scoreboard", TIMELINE="timeline", TICKER="ticker", LOWER_THIRD="lower-third", SIDE_ALERT="side-alert", HEADLINE="headline", FULLSCREEN="fullscreen", NEWSROOM="newsroom" }

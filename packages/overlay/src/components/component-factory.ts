@@ -1,0 +1,2 @@
+import { ComponentId } from "../identity/index.js";import type { OverlayBox,OverlayRegion } from "../layout/index.js";import { Transition } from "../transitions/index.js";import { OverlayComponent } from "./overlay-component.js";import type { OverlayComponentType } from "./component-type.js";
+export class OverlayComponentFactory{public static create(name:string,type:OverlayComponentType,region:OverlayRegion,box:OverlayBox):OverlayComponent{return new OverlayComponent(ComponentId.create(),{name,type,region,box,transition:Transition.fade()});}}
