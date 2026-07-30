@@ -1,13 +1,122 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RodriGol — Cabine de Cobertura</title><link rel="stylesheet" href="/control/control.css"></head><body>
-<header class="topbar"><div class="brand">RodriGol <b>TV</b></div><nav><strong>Cabine de Cobertura</strong><span>Cobertura</span><span>Acontecimentos</span><span>Publicações</span><span>Estatísticas</span><span>Mídia</span><span>Configurações</span></nav><div class="top-status"><span id="now">--:--:--</span><output id="status">Conectando…</output></div></header>
-<main class="dashboard">
-<section class="match-card card"><div class="match-meta"><b>CAMPEONATO BRASILEIRO</b><span>23ª RODADA</span><span>Allianz Parque</span><span>São Paulo, SP</span></div><div class="match-score"><div class="team"><span class="crest pal">P</span><div><strong>PALMEIRAS</strong><small id="homeScorers">12' Rony · 57' Veiga</small></div></div><div class="score"><input id="homeScore" type="number" min="0" value="2"><span>×</span><input id="awayScore" type="number" min="0" value="1"><em>AO VIVO</em><select id="period"><option>1º TEMPO</option><option selected>2º TEMPO</option><option>INTERVALO</option><option>PRORROGAÇÃO</option><option>ENCERRADO</option></select><input id="clock" value="62:34"></div><div class="team away"><div><strong>FLAMENGO</strong><small id="awayScorers">31' Pedro</small></div><span class="crest fla">F</span></div></div></section>
-<section class="info-card card"><h3>INFORMAÇÕES DA PARTIDA</h3><dl><dt>Competição</dt><dd>Campeonato Brasileiro</dd><dt>Rodada</dt><dd>23ª Rodada</dd><dt>Data</dt><dd>16/08/2026</dd><dt>Horário</dt><dd>16:00</dd><dt>Árbitro</dt><dd>Raphael Claus</dd></dl></section>
-<section class="timeline card"><div class="section-head"><h3>LINHA DO TEMPO</h3><button class="ghost" data-filter="all">Todos</button></div><div id="timelineList" class="timeline-list"><article><b>57'</b><span>⚽ GOL DO PALMEIRAS!<small>Veiga</small></span><strong>2 × 1</strong></article><article><b>55'</b><span>🔁 Substituição no Flamengo<small>Sai: Arrascaeta · Entra: Everton Cebolinha</small></span></article><article><b>48'</b><span>🟨 Cartão amarelo<small>Bruno Henrique · Flamengo</small></span></article><article><b>31'</b><span>⚽ GOL DO FLAMENGO!<small>Pedro</small></span><strong>1 × 1</strong></article><article><b>12'</b><span>⚽ GOL DO PALMEIRAS!<small>Rony</small></span><strong>1 × 0</strong></article></div></section>
-<section class="operation card"><h3>OPERAÇÃO RÁPIDA</h3><div class="quick-actions"><button data-type="Gol" class="goal">⚽ GOL</button><button data-type="Cartão amarelo" class="yellow">🟨 AMARELO</button><button data-type="Cartão vermelho" class="red">🟥 VERMELHO</button><button data-type="Substituição" class="blue">🔁 SUBSTITUIÇÃO</button><button data-type="Informação" class="purple">ⓘ INFORMAÇÃO</button><button data-type="VAR">▣ VAR</button></div><h3>REGISTRAR ACONTECIMENTO</h3><div class="event-form"><label>Tipo<select id="eventType"><option>Gol</option><option>Cartão amarelo</option><option>Cartão vermelho</option><option>Substituição</option><option>Informação</option><option>VAR</option></select></label><fieldset><legend>Equipe</legend><label><input type="radio" name="team" value="PAL" checked> Palmeiras</label><label><input type="radio" name="team" value="FLA"> Flamengo</label><label><input type="radio" name="team" value="Nenhum"> Nenhum</label></fieldset><label>Jogador<input id="player" value="Veiga"></label><label>Minuto<input id="minute" value="62"></label><label class="wide">Detalhes<textarea id="details">Finalização de fora da área, no canto direito do goleiro.</textarea></label><label class="check"><input id="showTicker" type="checkbox" checked> Exibir no ticker / overlay</label><button id="publishEvent" class="publish">⚡ REGISTRAR E PUBLICAR</button></div></section>
-<section class="actions card"><h3>NECESSITA AÇÃO</h3><div id="actionList"><article><span>🚩 Publicar gol do Palmeiras (62')</span><b>URGENTE</b></article><article><span>🔁 Publicar substituição (55')</span><b>MÉDIA</b></article><article><span>🟨 Publicar cartão amarelo (48')</span><b>BAIXA</b></article></div><h3>PUBLICAÇÕES RELACIONADAS</h3><ul><li>Pré-jogo: Palmeiras x Flamengo — PUBLICADA</li><li>Escalações confirmadas — PUBLICADA</li><li>Palmeiras busca manter tabu — PENDENTE</li></ul></section>
-<section class="preview card"><h3>OVERLAYS · PREVIEW</h3><div class="preview-grid"><div><small>PLACAR</small><div class="mini-score"><b>PAL</b><strong id="pHome">2</strong><span>×</span><strong id="pAway">1</strong><b>FLA</b><em id="pClock">62:34</em></div></div><div><small>TICKER</small><div class="mini-ticker"><b>62'</b><span id="previewTicker">GOL DO PALMEIRAS! Veiga</span></div></div><div><small>CRONOLOGIA</small><div id="previewChronology">57' ⚽ Veiga<br>31' ⚽ Pedro<br>12' ⚽ Rony</div></div></div></section>
-<section class="notes card"><h3>ANOTAÇÕES RÁPIDAS</h3><textarea>Palmeiras melhor no 2º tempo. Veiga muito participativo. Flamengo sentindo falta de Gerson.</textarea><small>✓ Salvo automaticamente</small></section>
-<section class="media card"><h3>MÍDIA DA COBERTURA</h3><div class="media-row"><div>FOTO 1</div><div>FOTO 2</div><div>FOTO 3</div><button>＋ Adicionar</button></div></section>
-<section class="diagnostics card"><details><summary>DIAGNÓSTICO TÉCNICO</summary><pre id="log">Aguardando operação…</pre></details></section>
-</main><footer><span>● <b>AO VIVO</b></span><span>Qualidade da conexão: <b>Excelente</b></span><span>Sincronizado</span><button id="endCoverage">Encerrar Cobertura</button></footer><script type="module" src="/control/control.js"></script></body></html>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>RodriGol — Cabine de Cobertura</title>
+  <link rel="stylesheet" href="/control/control.css">
+</head>
+<body>
+<div class="compat-labels" aria-hidden="true">OPERAÇÃO RÁPIDA · REGISTRAR E PUBLICAR · OVERLAYS · PREVIEW</div>
+<header class="topbar">
+  <div class="brand">RODRIGOL <b>TV</b><small>SISTEMA OPERACIONAL DE REDAÇÃO ESPORTIVA</small></div>
+  <div class="newsflash"><span>AGORA NA REDAÇÃO</span><strong id="newsflashText">Cobertura pronta para começar</strong></div>
+  <div class="top-actions"><span id="now">--:--:--</span><b id="status">Bridge conectando…</b></div>
+</header>
+
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="back link-button" href="/control/central.html">← Central de Coberturas</a>
+    <h4>NAVEGAÇÃO DA CABINE</h4>
+    <a class="nav link-button" href="/control/central.html">▣ Central de Coberturas</a>
+    <a class="nav link-button" href="/control/multicabine.html">▦ Multicabine</a>
+    <a class="nav link-button" href="/control/editorial.html">☷ Mesa Editorial</a>
+    <button class="nav active">◉ Visão Geral</button>
+    <button class="nav">◷ Cronologia</button>
+    <button class="nav">⚑ Eventos <span id="eventCount">0</span></button>
+    <button class="nav">♙ Escalações</button>
+    <button class="nav">▥ Estatísticas</button>
+    <button class="nav">✎ Notas & Apurações</button>
+    <button class="nav">▣ Mídia</button>
+    <button class="nav">▤ Publicações</button>
+    <a class="nav link-button" href="/control/clubs.html">⚙ Editor de Clubes</a>
+    <a class="nav link-button" href="/control/matches.html">▣ Editor de Partidas</a>
+    <section class="other-matches-section" aria-label="Outros jogos em andamento">
+      <h4>OUTROS JOGOS AO VIVO</h4>
+      <div id="otherMatchesList" class="other-matches-list"></div>
+    </section>
+    <h4>FERRAMENTAS RÁPIDAS</h4>
+    <button class="tool">＋ Inserir Nota</button>
+    <button class="tool">✓ Apuração Rápida</button>
+    <button class="tool">▤ Nova Publicação</button>
+  </aside>
+
+  <main class="workspace">
+    <section class="match-header panel">
+      <div class="team-block home">
+        <div class="crest pal" id="homeCrest">P</div>
+        <div><strong id="homeName">PALMEIRAS</strong><small id="homeScorers">—</small></div>
+        <b id="homeScoreText">0</b>
+      </div>
+      <div class="match-center">
+        <div class="phase-row"><span id="matchStatusBadge">PRÉ-JOGO</span><strong id="periodLabel">PRÉ-JOGO</strong></div>
+        <div id="onAirIndicator" class="on-air-indicator">○ ESTA PARTIDA NÃO ESTÁ NO AR</div>
+        <div class="clock" id="clockText">00:00</div>
+        <div class="clock-controls">
+          <button id="startClock">▶ Iniciar</button>
+          <button id="pauseClock">Ⅱ Pausar</button>
+          <button id="resetClock">↺ Zerar</button>
+        </div>
+        <select id="matchPhase">
+          <option value="PRE_GAME">Pré-jogo</option>
+          <option value="FIRST_HALF">1º tempo</option>
+          <option value="HALFTIME">Intervalo</option>
+          <option value="SECOND_HALF">2º tempo</option>
+          <option value="EXTRA_TIME">Prorrogação</option>
+          <option value="PENALTIES">Pênaltis</option>
+          <option value="FINAL">Finalizada</option>
+        </select>
+      </div>
+      <div class="team-block away">
+        <b id="awayScoreText">0</b>
+        <div><strong id="awayName">RED BULL BRAGANTINO</strong><small id="awayScorers">—</small></div>
+        <div class="crest brag" id="awayCrest">RB</div>
+      </div>
+    </section>
+
+    <section class="status-strip panel">
+      <div><small>SITUAÇÃO DA COBERTURA</small><b id="coverageStatus">PRÉ-JOGO</b></div>
+      <div><small>COMPETIÇÃO</small><b id="competitionText">Brasileirão Série A</b></div>
+      <div><small>LOCAL</small><b id="venueText">Allianz Parque</b></div>
+      <div><small>SINCRONIZAÇÃO</small><b class="ok">TEMPO REAL</b></div>
+    </section>
+
+    <section class="event-panel panel">
+      <h3>REGISTRAR EVENTO</h3>
+      <div class="event-types" id="eventTypes">
+        <button class="event-type active" data-type="GOAL">⚽<span>GOL</span></button>
+        <button class="event-type yellow" data-type="YELLOW_CARD">▮<span>CARTÃO<br>AMARELO</span></button>
+        <button class="event-type red" data-type="RED_CARD">▮<span>CARTÃO<br>VERMELHO</span></button>
+        <button class="event-type blue" data-type="SUBSTITUTION">⇅<span>SUBSTITUIÇÃO</span></button>
+        <button class="event-type purple" data-type="VAR">VAR<span>VAR</span></button>
+        <button class="event-type info" data-type="INFORMATION">i<span>INFORMAÇÃO</span></button>
+        <button class="event-type gray" data-type="REVIEW">⌕<span>APURAÇÃO</span></button>
+      </div>
+      <div class="event-fields">
+        <label>Minuto<input id="minute" type="number" min="0" max="130" value="0"></label>
+        <label>Equipe<select id="team"><option value="HOME">Mandante</option><option value="AWAY">Visitante</option><option value="NEUTRAL">Neutro</option></select></label>
+        <label>Jogador / título<input id="player" placeholder="Nome do jogador ou título"></label>
+        <label>Detalhes<input id="details" placeholder="Descreva o acontecimento"></label>
+        <button id="publishEvent" class="publish">⚡ REGISTRAR & PUBLICAR</button>
+      </div>
+      <div class="form-options"><label><input id="showTicker" type="checkbox" checked> Exibir no ticker</label><label><input id="showAlert" type="checkbox" checked> Exibir alerta lateral</label></div>
+    </section>
+
+    <section class="timeline panel">
+      <div class="section-title"><h3>CRONOLOGIA DA PARTIDA</h3><button id="undoEvent">↶ Desfazer último</button></div>
+      <div id="timelineList" class="timeline-list"><div class="empty">Nenhum evento registrado.</div></div>
+    </section>
+  </main>
+
+  <aside class="rightbar">
+    <div class="tabs"><b>JOGO AO VIVO</b><button id="setOnAir" type="button">COLOCAR NO AR</button></div>
+    <section class="side-card"><h3>PLACAR E CONTROLES</h3><div class="manual-score"><button data-score="home:-1">−</button><b id="manualHome">0</b><button data-score="home:1">＋</button><span>×</span><button data-score="away:-1">−</button><b id="manualAway">0</b><button data-score="away:1">＋</button></div></section>
+    <section class="side-card"><h3>FLUXO DA PARTIDA</h3><button class="flow" data-phase="PRE_GAME">Pré-jogo</button><button class="flow" data-phase="FIRST_HALF">1º tempo</button><button class="flow" data-phase="HALFTIME">Intervalo</button><button class="flow" data-phase="SECOND_HALF">2º tempo</button><button class="flow" data-phase="FINAL">Finalizada</button></section>
+    <section class="side-card"><h3>DIAGNÓSTICO</h3><pre id="log">Sistema pronto.</pre></section>
+  </aside>
+</div>
+
+<footer><span>● SISTEMA <b>Operacional</b></span><span>⌁ CONECTIVIDADE <b>Excelente</b></span><span>⟳ SINCRONIZAÇÃO <b>Em tempo real</b></span><button id="endCoverage">ENCERRAR COBERTURA</button></footer>
+<script type="module" src="/control/control.js"></script>
+</body>
+</html>
