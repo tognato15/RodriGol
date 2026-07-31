@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RodriGol Studio — Alpha 0.4.2</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="studio-overlay" aria-label="Overlay RodriGol Studio">
+    <header class="studio-topbar">
+      <section class="datetime" aria-label="Data e horário">
+        <strong id="currentTime">--:--</strong>
+        <div><b id="currentWeekday">---</b><span id="currentDate">-- DE -- DE ----</span></div>
+      </section>
+      <section class="studio-brand"><div class="brand-name">RODRIGOL <b>STUDIO</b></div></section>
+      <section class="coverage-status">
+        <span class="live-dot" aria-hidden="true"></span>
+        <div><b id="coverageTitle">COBERTURA AO VIVO</b><span id="coverageMessage">ACOMPANHANDO TODOS OS LANCES EM TEMPO REAL</span></div>
+      </section>
+    </header>
+
+    <section class="broadcast-grid">
+      <div class="left-column">
+        <article class="main-match-card" aria-label="Jogo principal">
+          <header class="section-header main-header"><span>JOGO PRINCIPAL</span><strong id="mainCompetition">CAMPEONATO BRASILEIRO · 18ª RODADA</strong><em id="mainStatus">AO VIVO</em></header>
+          <div class="main-match-body">
+            <section class="main-team home-team">
+              <div id="homeCrest" class="main-crest"><span>PAL</span></div>
+              <div class="team-copy"><strong id="homeName">PALMEIRAS</strong><small id="homeScorers">⚽ 12' R. Veiga · ⚽ 58' Flaco López</small></div>
+            </section>
+            <section class="score-center">
+              <div class="score-line"><b id="homeScore">2</b><i>×</i><b id="awayScore">1</b></div>
+              <div class="time-line"><strong id="mainClock">62:34</strong><span id="mainPeriod">2º TEMPO</span></div>
+              <small id="mainVenue">ALLIANZ PARQUE</small>
+            </section>
+            <section class="main-team away-team">
+              <div class="team-copy"><strong id="awayName">FLAMENGO</strong><small id="awayScorers">⚽ 37' Pedro</small></div>
+              <div id="awayCrest" class="main-crest"><span>FLA</span></div>
+            </section>
+          </div>
+          <footer class="main-match-footer"><span id="mainMatchMessage">PARTIDA EM ANDAMENTO</span><span class="on-air"><i></i> NO AR</span></footer>
+        </article>
+
+        <section class="round-board" aria-label="Jogos da rodada">
+          <div id="roundMatches" class="match-tiles"></div>
+        </section>
+
+        <section class="round-summary" aria-label="Resumo da rodada">
+          <div class="summary-label"><b>AGORA NA RODADA</b></div>
+          <div class="summary-window"><div id="summaryTrack" class="summary-track"></div></div>
+        </section>
+
+        <section class="events-board" aria-label="Últimas ações">
+          <div class="events-title"><strong>ÚLTIMAS AÇÕES</strong><span>ATUALIZAÇÃO AUTOMÁTICA</span></div>
+          <div class="events-columns"><b>COMP.</b><b>AÇÃO</b><b>RESULTADO</b><b>TEMPO</b><b>AUTOR</b></div>
+          <div id="eventsList" class="events-list"></div>
+        </section>
+      </div>
+
+      <aside class="side-carousel" aria-label="Painel lateral">
+        <header class="side-header"><strong id="sideTitle">JOGOS DA RODADA</strong><span id="sideCounter">1/3</span></header>
+        <div id="sideContent" class="side-content"></div>
+        <footer><span class="side-dot active"></span><span class="side-dot"></span><span class="side-dot"></span></footer>
+      </aside>
+    </section>
+
+    <footer class="editorial-highlight" aria-label="Destaque editorial">
+      <div class="highlight-label">DESTAQUE</div>
+      <strong id="highlightText">BRASILEIRÃO NA RETA FINAL: ACOMPANHE TODOS OS JOGOS NO RODRIGOL STUDIO</strong>
+      <div class="social">@RODRIGOL.STUDIO</div>
+    </footer>
+
+    <div id="connection" class="connection" title="Conexão com o OBS Bridge"></div>
+  </main>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

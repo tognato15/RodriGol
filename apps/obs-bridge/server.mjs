@@ -36,7 +36,7 @@ async function serve(root,pathname,response){const relative=pathname==="/"?"inde
 const server=createServer(async(request,response)=>{
   const url=new URL(request.url??"/",`http://${host}`);const pathname=decodeURIComponent(url.pathname);
   if(request.method==="OPTIONS"){response.writeHead(204,{"Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Headers":"Content-Type"});response.end();return;}
-  if(pathname==="/health"){json(response,200,{status:"ok",app:"@rodrigol/obs-bridge",version:"0.4.4",connections:clients.size,sequence});return;}
+  if(pathname==="/health"){json(response,200,{status:"ok",app:"@rodrigol/obs-bridge",version:"0.6.4",connections:clients.size,sequence});return;}
   if(pathname==="/api/state"){json(response,200,{connections:clients.size,sequence,lastCommand,regions:stateSnapshot()});return;}
   if(pathname==="/api/commands"&&request.method==="POST"){
     try{const command=JSON.parse(await readBody(request));if(!validCommand(command)){json(response,400,{ok:false,error:"Comando de overlay inválido."});return;}const envelope=broadcast(command,"api");json(response,202,{ok:true,envelope});}catch(error){json(response,400,{ok:false,error:error instanceof Error?error.message:"JSON inválido"});}return;
@@ -53,7 +53,7 @@ server.on("upgrade",(request,socket)=>{
   const key=request.headers["sec-websocket-key"];if(typeof key!=="string"){socket.destroy();return;}
   const accept=createHash("sha1").update(key+"258EAFA5-E914-47DA-95CA-C5AB0DC85B11").digest("base64");
   socket.write(["HTTP/1.1 101 Switching Protocols","Upgrade: websocket","Connection: Upgrade",`Sec-WebSocket-Accept: ${accept}`,"\r\n"].join("\r\n"));
-  clients.add(socket);send(socket,{type:"welcome",version:"0.4.4",sequence,lastCommand,regions:stateSnapshot()});
+  clients.add(socket);send(socket,{type:"welcome",version:"0.6.4",sequence,lastCommand,regions:stateSnapshot()});
   socket.on("close",()=>clients.delete(socket));socket.on("error",()=>clients.delete(socket));
   socket.on("data",buffer=>{if((buffer[0]&0x0f)===0x8){clients.delete(socket);socket.end();}});
 });

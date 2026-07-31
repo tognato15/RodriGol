@@ -1,0 +1,15 @@
+{
+  "name": "@rodrigol/overlay-studio",
+  "version": "0.4.2-alpha.4",
+  "private": true,
+  "description": "Overlay RodriGol Studio Alpha 0.4.2: scoreboard em linha única, oito últimas ações com nomes completos e rodapé editorial preto.",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.mjs",
+    "start": "node server.mjs",
+    "build": "node scripts/build.mjs",
+    "check": "node --check public/app.js && node --check server.mjs && node --check scripts/build.mjs",
+    "test": "node --test",
+    "clean": "node -e \"const fs=require('node:fs'); fs.rmSync('dist',{recursive:true,force:true});\""
+  }
+}

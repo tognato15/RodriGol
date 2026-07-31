@@ -1,23 +1,535 @@
-import{getClubs,getMatches,readCoverage,getEditorialState,saveEditorialState}from'./data-store.js';
-const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let filter='ALL',editorial=getEditorialState();
-const livePhases=['FIRST_HALF','SECOND_HALF','EXTRA_TIME','PENALTIES'];
-function club(id){return getClubs().find(c=>c.id===id)||{shortName:'Clube removido'};}
-function allEvents(){const result=[];for(const match of getMatches()){const coverage=readCoverage(match.id,{events:[],phase:match.status||'PRE_GAME'});for(const event of coverage.events||[]){result.push({...event,matchId:match.id,match,home:club(match.homeClubId),away:club(match.awayClubId)});}}return result.sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));}
-function statusOf(event){return editorial.items?.[event.id]?.status||'RECEIVED';}
-function dataOf(event){return editorial.items?.[event.id]||{};}
-function persist(){saveEditorialState(editorial);}
-function titleOf(e){const team=e.team==='HOME'?e.home.shortName:e.team==='AWAY'?e.away.shortName:'';return e.type==='GOAL'?`GOL! ${e.player||team}`:(e.player||e.label||'Informação');}
-function textOf(e){return e.details||`${e.label} em ${e.home.shortName} × ${e.away.shortName}`;}
-function channelLabel(ch){return ch==='ticker'?'Ticker':ch==='side-alert'?'Alerta lateral':'Overlay';}
-async function command(body){const r=await fetch('/api/commands',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),d=await r.json();if(!r.ok)throw new Error(d.error||'Falha na publicação');return d;}
-async function publishEvent(e){const d=dataOf(e),text=[titleOf(e),textOf(e)].filter(Boolean).join(' — ');await command({type:'show',region:d.channel||'ticker',payload:(d.channel||'ticker')==='side-alert'?{label:e.label||'INFORMAÇÃO',headline:titleOf(e),summary:textOf(e)}:{label:`${e.minute??0}'`,text}});editorial.items[e.id]={...d,status:'PUBLISHED',publishedAt:new Date().toISOString()};editorial.published=[{id:e.id,text,matchId:e.matchId,publishedAt:new Date().toISOString()},...(editorial.published||[]).filter(x=>x.id!==e.id)].slice(0,60);persist();$('newsflashText').textContent=text;render();}
-function setStatus(id,status){editorial.items[id]={...(editorial.items?.[id]||{}),status,updatedAt:new Date().toISOString()};persist();render();}
-function scheduleEvent(id){const time=prompt('Horário da publicação (HH:MM):',new Date(Date.now()+15*60000).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));if(!time)return;editorial.items[id]={...(editorial.items?.[id]||{}),status:'SCHEDULED',scheduledTime:time,updatedAt:new Date().toISOString()};persist();render();}
-function card(e,status){const d=dataOf(e),checked=d.selected?'checked':'';return `<article class="editorial-card ${status.toLowerCase()}" data-id="${e.id}"><div class="card-top"><input type="checkbox" data-select="${e.id}" ${checked}><span>${new Date(e.createdAt||Date.now()).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span><b>${esc(e.home.shortName)} × ${esc(e.away.shortName)}</b></div><strong>${esc(titleOf(e))}</strong><p>${esc(textOf(e))}</p><div class="card-actions">${status!=='ANALYSIS'?`<button data-status="${e.id}:ANALYSIS">Analisar</button>`:''}${status!=='PRIORITY'?`<button data-status="${e.id}:PRIORITY">Prioridade</button>`:''}<button data-schedule="${e.id}">${d.scheduledTime||'Agendar'}</button><button data-publish="${e.id}">Publicar</button></div></article>`;}
-function renderColumn(id,events,status){$(id).innerHTML=events.length?events.map(e=>card(e,status)).join(''):'<div class="empty">Nenhuma informação nesta etapa.</div>';}
-function render(){const query=$('globalSearch').value.trim().toLowerCase(),events=allEvents().filter(e=>!query||[e.label,e.player,e.details,e.home.shortName,e.away.shortName,e.match.competition].join(' ').toLowerCase().includes(query));const groups={RECEIVED:[],ANALYSIS:[],PRIORITY:[],SCHEDULED:[],PUBLISHED:[]};events.forEach(e=>(groups[statusOf(e)]||groups.RECEIVED).push(e));renderColumn('receivedList',groups.RECEIVED,'RECEIVED');renderColumn('analysisList',groups.ANALYSIS,'ANALYSIS');renderColumn('priorityList',groups.PRIORITY,'PRIORITY');renderColumn('scheduledList',groups.SCHEDULED,'SCHEDULED');for(const k of ['received','analysis','priority','scheduled']){$(`${k}Count`).textContent=groups[k.toUpperCase()].length;$(`${k}Badge`).textContent=groups[k.toUpperCase()].length;}$('publishedCount').textContent=groups.PUBLISHED.length;$('publishedMini').textContent=groups.PUBLISHED.length;$('sideReceived').textContent=groups.RECEIVED.length;$('sidePublished').textContent=groups.PUBLISHED.length;const matches=getMatches(),live=matches.filter(m=>livePhases.includes(readCoverage(m.id,{phase:m.status}).phase)).length;$('liveCount').textContent=live;$('footerLive').textContent=`${live} ao vivo`;$('sourcesCount').textContent=matches.length;$('operationPercent').textContent=groups.PRIORITY.length?`${Math.max(70,100-groups.PRIORITY.length*3)}%`:'100%';$('publishedList').innerHTML=(editorial.published||[]).length?(editorial.published||[]).slice(0,6).map(p=>`<div><b>${new Date(p.publishedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})} · ${esc(p.text)}</b><small>Overlay e redação</small></div>`).join(''):'<div class="empty">Nenhuma publicação nesta sessão.</div>';$('sourcesList').innerHTML=matches.slice(0,8).map(m=>{const c=readCoverage(m.id,{events:[]});return `<div><b>${esc(club(m.homeClubId).shortName)} × ${esc(club(m.awayClubId).shortName)}</b><small>${c.events?.length||0} informações · ${esc(m.competition)}</small></div>`;}).join('');$('alerts').innerHTML=`<div class="urgent">● ${groups.PRIORITY.length} item(ns) exigem decisão imediata</div><div class="warning">▲ ${groups.ANALYSIS.length} informação(ões) em análise</div><div>◉ ${groups.SCHEDULED.length} publicação(ões) programada(s)</div>`;$('ranking').innerHTML=matches.map(m=>({m,n:readCoverage(m.id,{events:[]}).events?.length||0})).sort((a,b)=>b.n-a.n).slice(0,5).map((x,i)=>`<div><b>${i+1}. ${esc(club(x.m.homeClubId).shortName)} × ${esc(club(x.m.awayClubId).shortName)}</b> <span>${x.n}</span></div>`).join('');$('agendaCount').textContent=(editorial.agendas||[]).length;$('agendaList').innerHTML=(editorial.agendas||[]).length?(editorial.agendas||[]).slice(0,12).map(a=>`<div><b>${esc(a.title)}</b><small>${a.status==='DONE'?'Concluída':'Pauta aberta'} · ${new Date(a.createdAt).toLocaleString('pt-BR')}</small></div>`).join(''):'<div class="empty">Nenhuma pauta criada.</div>';$('lastUpdate').textContent=`Atualizados às ${new Date().toLocaleTimeString('pt-BR')}`;bind();}
-function bind(){document.querySelectorAll('[data-status]').forEach(b=>b.onclick=()=>{const[id,status]=b.dataset.status.split(':');setStatus(id,status);});document.querySelectorAll('[data-schedule]').forEach(b=>b.onclick=()=>scheduleEvent(b.dataset.schedule));document.querySelectorAll('[data-publish]').forEach(b=>b.onclick=()=>{const e=allEvents().find(x=>x.id===b.dataset.publish);if(e)publishEvent(e).catch(err=>alert(err.message));});document.querySelectorAll('[data-select]').forEach(c=>c.onchange=()=>{editorial.items[c.dataset.select]={...(editorial.items?.[c.dataset.select]||{}),selected:c.checked};persist();});}
-$('publishSelected').onclick=async()=>{const selected=allEvents().filter(e=>dataOf(e).selected);if(!selected.length)return alert('Selecione pelo menos uma informação.');for(const e of selected)await publishEvent(e);};$('quickPublish').onclick=async()=>{const text=$('quickText').value.trim();if(!text)return alert('Digite a informação.');const channel=$('quickChannel').value;await command({type:'show',region:channel,payload:channel==='side-alert'?{label:'INFORMAÇÃO',headline:'AGORA NA REDAÇÃO',summary:text}:{label:'AGORA',text}});editorial.published=[{id:`quick-${Date.now()}`,text,publishedAt:new Date().toISOString()},...(editorial.published||[])];persist();$('quickText').value='';$('newsflashText').textContent=text;render();};$('refresh').onclick=render;$('globalSearch').oninput=render;$('newAgenda').onclick=()=>{const text=prompt('Título da nova pauta:');if(text){editorial.agendas=[{id:`agenda-${Date.now()}`,title:text,status:'OPEN',createdAt:new Date().toISOString()},...(editorial.agendas||[])];persist();render();}};document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;const map={RECEIVED:'receivedList',ANALYSIS:'analysisList',PRIORITY:'priorityList',SCHEDULED:'scheduledList',PUBLISHED:'publishedList'};document.getElementById(map[filter]||'receivedList')?.scrollIntoView({behavior:'smooth'});});
-async function health(){try{const r=await fetch('/health',{cache:'no-store'}),d=await r.json();$('bridgeStatus').textContent=`Online · ${d.connections} overlay(s)`;}catch{$('bridgeStatus').textContent='Bridge indisponível';}}
-setInterval(()=>{$('now').textContent=new Date().toLocaleTimeString('pt-BR');$('today').textContent=new Date().toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short'});},1000);setInterval(health,3000);setInterval(()=>{const now=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});for(const e of allEvents().filter(x=>statusOf(x)==='SCHEDULED'&&dataOf(x).scheduledTime===now))publishEvent(e).catch(()=>{});},30000);window.addEventListener('storage',render);window.addEventListener('rodrigol:data-changed',render);render();health();
+import {
+  getClubs,
+  getMatches,
+  readCoverage,
+  getEditorialState,
+  saveEditorialState,
+  getNewsState,
+  saveNewsState
+} from './data-store.js';
+
+const $ = id => document.getElementById(id);
+const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+}[char]));
+
+let filter = 'ALL';
+let editorial = getEditorialState();
+const livePhases = ['FIRST_HALF', 'SECOND_HALF', 'EXTRA_TIME', 'PENALTIES'];
+const agendaStatuses = ['RECEIVED', 'ANALYSIS', 'PRIORITY', 'SCHEDULED', 'PUBLISHED'];
+
+function club(id) {
+  return getClubs().find(item => item.id === id) || { shortName: 'Clube removido' };
+}
+
+function allEvents() {
+  const result = [];
+  for (const match of getMatches()) {
+    const coverage = readCoverage(match.id, { events: [], phase: match.status || 'PRE_GAME' });
+    for (const event of coverage.events || []) {
+      result.push({
+        ...event,
+        matchId: match.id,
+        match,
+        home: club(match.homeClubId),
+        away: club(match.awayClubId)
+      });
+    }
+  }
+  return result.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+}
+
+function statusOf(event) {
+  return editorial.items?.[event.id]?.status || 'RECEIVED';
+}
+
+function dataOf(event) {
+  return editorial.items?.[event.id] || {};
+}
+
+function persist() {
+  editorial = saveEditorialState(editorial);
+}
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function agendaStatusLabel(status) {
+  return ({
+    RECEIVED: 'Recebida',
+    ANALYSIS: 'Em análise',
+    PRIORITY: 'Prioridade máxima',
+    SCHEDULED: 'Programada',
+    PUBLISHED: 'Publicada'
+  })[status] || 'Recebida';
+}
+
+function agendaPriorityLabel(priority) {
+  return ({ LOW: 'Baixa', NORMAL: 'Normal', HIGH: 'Alta', URGENT: 'Urgente' })[priority] || 'Normal';
+}
+
+function matchLabel(matchId) {
+  const match = getMatches().find(item => item.id === matchId);
+  return match
+    ? `${club(match.homeClubId).shortName} × ${club(match.awayClubId).shortName}`
+    : 'Sem partida relacionada';
+}
+
+function titleOf(event) {
+  const team = event.team === 'HOME'
+    ? event.home.shortName
+    : event.team === 'AWAY'
+      ? event.away.shortName
+      : '';
+  return event.type === 'GOAL'
+    ? `GOL! ${event.player || team}`
+    : (event.player || event.label || 'Informação');
+}
+
+function textOf(event) {
+  return event.details || `${event.label} em ${event.home.shortName} × ${event.away.shortName}`;
+}
+
+async function command(body) {
+  const response = await fetch('/api/commands', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'Falha na publicação');
+  return data;
+}
+
+async function publishEvent(event) {
+  const item = dataOf(event);
+  const text = [titleOf(event), textOf(event)].filter(Boolean).join(' — ');
+  const region = item.channel || 'ticker';
+  await command({
+    type: 'show',
+    region,
+    payload: region === 'side-alert'
+      ? { label: event.label || 'INFORMAÇÃO', headline: titleOf(event), summary: textOf(event) }
+      : { label: `${event.minute ?? 0}'`, text }
+  });
+  editorial.items[event.id] = { ...item, status: 'PUBLISHED', publishedAt: nowIso(), selected: false };
+  editorial.published = [
+    { id: event.id, kind: 'event', text, matchId: event.matchId, publishedAt: nowIso() },
+    ...(editorial.published || []).filter(item => item.id !== event.id)
+  ].slice(0, 100);
+  persist();
+  $('newsflashText').textContent = text;
+  render();
+}
+
+function setEventStatus(id, status) {
+  editorial.items[id] = { ...(editorial.items?.[id] || {}), status, updatedAt: nowIso() };
+  persist();
+  render();
+}
+
+function scheduleEvent(id) {
+  const suggested = new Date(Date.now() + 15 * 60000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const time = window.prompt('Horário da publicação (HH:MM):', suggested);
+  if (!time) return;
+  editorial.items[id] = {
+    ...(editorial.items?.[id] || {}),
+    status: 'SCHEDULED',
+    scheduledTime: time,
+    updatedAt: nowIso()
+  };
+  persist();
+  render();
+}
+
+function eventCard(event, status) {
+  const item = dataOf(event);
+  return `<article class="editorial-card ${status.toLowerCase()}" data-id="${event.id}">
+    <div class="card-top">
+      <input type="checkbox" data-select="${event.id}" ${item.selected ? 'checked' : ''}>
+      <span>${new Date(event.createdAt || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+      <b>${esc(event.home.shortName)} × ${esc(event.away.shortName)}</b>
+    </div>
+    <strong>${esc(titleOf(event))}</strong>
+    <p>${esc(textOf(event))}</p>
+    <div class="card-actions">
+      ${status !== 'ANALYSIS' ? `<button data-event-status="${event.id}:ANALYSIS">Analisar</button>` : ''}
+      ${status !== 'PRIORITY' ? `<button data-event-status="${event.id}:PRIORITY">Prioridade</button>` : ''}
+      <button data-event-schedule="${event.id}">${item.scheduledTime || 'Agendar'}</button>
+      <button data-event-publish="${event.id}">Publicar</button>
+    </div>
+  </article>`;
+}
+
+function renderColumn(id, events, status) {
+  $(id).innerHTML = events.length
+    ? events.map(event => eventCard(event, status)).join('')
+    : '<div class="empty">Nenhuma informação nesta etapa.</div>';
+}
+
+function appendAgendaHistory(agenda, action, detail = '') {
+  const entry = { id: `history-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, action, detail, at: nowIso() };
+  return { ...agenda, history: [entry, ...(agenda.history || [])].slice(0, 50), updatedAt: entry.at };
+}
+
+function agendaPublicationText(agenda) {
+  const related = agenda.matchId ? ` · ${matchLabel(agenda.matchId)}` : '';
+  return `${agenda.title}${related}${agenda.description ? ` — ${agenda.description}` : ''}`;
+}
+
+
+function syncAgendaToNews(agenda) {
+  const news = getNewsState();
+  const previous = (news.articles || []).find(item => item.sourceAgendaId === agenda.id);
+  const article = {
+    ...previous,
+    id: previous?.id || `news-${agenda.id}`,
+    sourceAgendaId: agenda.id,
+    title: agenda.title,
+    subtitle: agenda.description || '',
+    body: previous?.body || agenda.description || '',
+    category: agenda.category || 'Geral',
+    priority: agenda.priority || 'NORMAL',
+    matchId: agenda.matchId || '',
+    author: agenda.author || 'Redação RodriGol',
+    status: 'PUBLISHED',
+    publishedAt: agenda.publishedAt || nowIso(),
+    createdAt: previous?.createdAt || agenda.createdAt || nowIso(),
+    updatedAt: nowIso()
+  };
+  news.articles = [article, ...(news.articles || []).filter(item => item.id !== article.id)];
+  saveNewsState(news);
+}
+
+async function publishAgenda(id, automatic = false) {
+  const agenda = (editorial.agendas || []).find(item => item.id === id);
+  if (!agenda) return;
+  const text = agendaPublicationText(agenda);
+  const channel = agenda.channel || 'ticker';
+  await command({
+    type: 'show',
+    region: channel,
+    payload: channel === 'side-alert'
+      ? { label: agenda.category || 'PAUTA', headline: agenda.title, summary: agenda.description || matchLabel(agenda.matchId) }
+      : { label: agenda.category || 'PAUTA', text }
+  });
+  const publishedAt = nowIso();
+  const updated = appendAgendaHistory({ ...agenda, status: 'PUBLISHED', publishedAt }, automatic ? 'Publicação automática' : 'Publicada no overlay', channel);
+  editorial.agendas = (editorial.agendas || []).map(item => item.id === id ? updated : item);
+  syncAgendaToNews(updated);
+  editorial.published = [
+    { id: agenda.id, kind: 'agenda', text, matchId: agenda.matchId, publishedAt },
+    ...(editorial.published || []).filter(item => item.id !== agenda.id)
+  ].slice(0, 100);
+  persist();
+  $('newsflashText').textContent = text;
+  render();
+}
+
+function moveAgenda(id, status) {
+  const agenda = (editorial.agendas || []).find(item => item.id === id);
+  if (!agenda || !agendaStatuses.includes(status)) return;
+  let updated = { ...agenda, status };
+  if (status !== 'SCHEDULED') updated.scheduledAt = status === 'PUBLISHED' ? agenda.scheduledAt : '';
+  updated = appendAgendaHistory(updated, `Movida para ${agendaStatusLabel(status)}`);
+  editorial.agendas = (editorial.agendas || []).map(item => item.id === id ? updated : item);
+  persist();
+  render();
+}
+
+function agendaActions(agenda) {
+  const buttons = [];
+  if (agenda.status !== 'RECEIVED') buttons.push(`<button data-agenda-status="${agenda.id}:RECEIVED">Recebida</button>`);
+  if (agenda.status !== 'ANALYSIS') buttons.push(`<button data-agenda-status="${agenda.id}:ANALYSIS">Analisar</button>`);
+  if (agenda.status !== 'PRIORITY') buttons.push(`<button data-agenda-status="${agenda.id}:PRIORITY">Prioridade</button>`);
+  if (agenda.status !== 'SCHEDULED') buttons.push(`<button data-edit-agenda="${agenda.id}" data-focus-schedule="1">Programar</button>`);
+  if (agenda.status !== 'PUBLISHED') buttons.push(`<button class="publish" data-publish-agenda="${agenda.id}">Publicar</button>`);
+  buttons.push(`<button data-edit-agenda="${agenda.id}">Editar</button>`);
+  buttons.push(`<button data-history-agenda="${agenda.id}">Histórico</button>`);
+  buttons.push(`<button class="danger" data-delete-agenda="${agenda.id}">Excluir</button>`);
+  return buttons.join('');
+}
+
+function agendaCard(agenda) {
+  const history = (agenda.history || []).slice(0, 8);
+  return `<article class="agenda-card priority-${String(agenda.priority || 'NORMAL').toLowerCase()} status-${String(agenda.status || 'RECEIVED').toLowerCase()}">
+    <div class="agenda-main">
+      <div class="agenda-tags">
+        <span>${esc(agendaStatusLabel(agenda.status))}</span>
+        <span>${esc(agendaPriorityLabel(agenda.priority))}</span>
+        <span>${esc(agenda.category || 'Geral')}</span>
+      </div>
+      <b>${esc(agenda.title)}</b>
+      ${agenda.description ? `<p>${esc(agenda.description)}</p>` : ''}
+      <small>${esc(matchLabel(agenda.matchId))} · ${esc(agenda.author || 'Redação RodriGol')} · ${new Date(agenda.createdAt).toLocaleString('pt-BR')}${agenda.scheduledAt ? ` · Programada para ${new Date(agenda.scheduledAt).toLocaleString('pt-BR')}` : ''}</small>
+      <div class="agenda-history" id="history-${agenda.id}" hidden>
+        <strong>Histórico editorial</strong>
+        ${history.length ? history.map(item => `<div><time>${new Date(item.at).toLocaleString('pt-BR')}</time><span>${esc(item.action)}${item.detail ? ` · ${esc(item.detail)}` : ''}</span></div>`).join('') : '<div><span>Sem alterações registradas.</span></div>'}
+      </div>
+    </div>
+    <div class="agenda-actions">${agendaActions(agenda)}</div>
+  </article>`;
+}
+
+function filteredAgendas(query) {
+  return (editorial.agendas || []).filter(agenda => {
+    const matchesFilter = filter === 'ALL' || agenda.status === filter;
+    const haystack = [agenda.title, agenda.description, agenda.category, agenda.author, matchLabel(agenda.matchId)].join(' ').toLowerCase();
+    return matchesFilter && (!query || haystack.includes(query));
+  });
+}
+
+function render() {
+  const query = $('globalSearch').value.trim().toLowerCase();
+  const events = allEvents().filter(event => !query || [
+    event.label,
+    event.player,
+    event.details,
+    event.home.shortName,
+    event.away.shortName,
+    event.match.competition
+  ].join(' ').toLowerCase().includes(query));
+
+  const groups = { RECEIVED: [], ANALYSIS: [], PRIORITY: [], SCHEDULED: [], PUBLISHED: [] };
+  events.forEach(event => (groups[statusOf(event)] || groups.RECEIVED).push(event));
+  renderColumn('receivedList', groups.RECEIVED, 'RECEIVED');
+  renderColumn('analysisList', groups.ANALYSIS, 'ANALYSIS');
+  renderColumn('priorityList', groups.PRIORITY, 'PRIORITY');
+  renderColumn('scheduledList', groups.SCHEDULED, 'SCHEDULED');
+
+  for (const key of ['received', 'analysis', 'priority', 'scheduled']) {
+    $(`${key}Count`).textContent = groups[key.toUpperCase()].length;
+    $(`${key}Badge`).textContent = groups[key.toUpperCase()].length;
+  }
+  $('publishedCount').textContent = groups.PUBLISHED.length + (editorial.agendas || []).filter(item => item.status === 'PUBLISHED').length;
+  $('publishedMini').textContent = (editorial.published || []).length;
+  $('sideReceived').textContent = groups.RECEIVED.length + (editorial.agendas || []).filter(item => item.status === 'RECEIVED').length;
+  $('sidePublished').textContent = (editorial.published || []).length;
+
+  const matches = getMatches();
+  const live = matches.filter(match => livePhases.includes(readCoverage(match.id, { phase: match.status }).phase)).length;
+  $('liveCount').textContent = live;
+  $('footerLive').textContent = `${live} ao vivo`;
+  $('sourcesCount').textContent = matches.length;
+  const priorityTotal = groups.PRIORITY.length + (editorial.agendas || []).filter(item => item.status === 'PRIORITY').length;
+  $('operationPercent').textContent = priorityTotal ? `${Math.max(70, 100 - priorityTotal * 3)}%` : '100%';
+
+  $('publishedList').innerHTML = (editorial.published || []).length
+    ? (editorial.published || []).slice(0, 8).map(item => `<div><b>${new Date(item.publishedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} · ${esc(item.text)}</b><small>${item.kind === 'agenda' ? 'Pauta editorial' : 'Evento de cobertura'} · Overlay e redação</small></div>`).join('')
+    : '<div class="empty">Nenhuma publicação nesta sessão.</div>';
+
+  $('sourcesList').innerHTML = matches.slice(0, 8).map(match => {
+    const coverage = readCoverage(match.id, { events: [] });
+    return `<div><b>${esc(club(match.homeClubId).shortName)} × ${esc(club(match.awayClubId).shortName)}</b><small>${coverage.events?.length || 0} informações · ${esc(match.competition)}</small></div>`;
+  }).join('');
+
+  $('alerts').innerHTML = `<div class="urgent">● ${priorityTotal} item(ns) exigem decisão imediata</div><div class="warning">▲ ${groups.ANALYSIS.length + (editorial.agendas || []).filter(item => item.status === 'ANALYSIS').length} informação(ões) em análise</div><div>◉ ${groups.SCHEDULED.length + (editorial.agendas || []).filter(item => item.status === 'SCHEDULED').length} publicação(ões) programada(s)</div>`;
+
+  $('ranking').innerHTML = matches.map(match => ({ match, total: readCoverage(match.id, { events: [] }).events?.length || 0 }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 5)
+    .map((item, index) => `<div><b>${index + 1}. ${esc(club(item.match.homeClubId).shortName)} × ${esc(club(item.match.awayClubId).shortName)}</b> <span>${item.total}</span></div>`).join('');
+
+  const agendas = filteredAgendas(query);
+  $('agendaCount').textContent = `${agendas.length}/${(editorial.agendas || []).length}`;
+  $('agendaList').innerHTML = agendas.length
+    ? agendas.map(agendaCard).join('')
+    : '<div class="empty">Nenhuma pauta encontrada neste filtro.</div>';
+  $('agendaFilterLabel').textContent = filter === 'ALL' ? 'Todas as etapas' : agendaStatusLabel(filter);
+  $('lastUpdate').textContent = `Atualizados às ${new Date().toLocaleTimeString('pt-BR')}`;
+  bind();
+}
+
+function bind() {
+  document.querySelectorAll('[data-event-status]').forEach(button => {
+    button.onclick = () => {
+      const [id, status] = button.dataset.eventStatus.split(':');
+      setEventStatus(id, status);
+    };
+  });
+  document.querySelectorAll('[data-event-schedule]').forEach(button => button.onclick = () => scheduleEvent(button.dataset.eventSchedule));
+  document.querySelectorAll('[data-event-publish]').forEach(button => {
+    button.onclick = () => {
+      const event = allEvents().find(item => item.id === button.dataset.eventPublish);
+      if (event) publishEvent(event).catch(error => alert(error.message));
+    };
+  });
+  document.querySelectorAll('[data-select]').forEach(control => {
+    control.onchange = () => {
+      editorial.items[control.dataset.select] = { ...(editorial.items?.[control.dataset.select] || {}), selected: control.checked };
+      persist();
+    };
+  });
+  document.querySelectorAll('[data-agenda-status]').forEach(button => {
+    button.onclick = () => {
+      const [id, status] = button.dataset.agendaStatus.split(':');
+      moveAgenda(id, status);
+    };
+  });
+  document.querySelectorAll('[data-publish-agenda]').forEach(button => button.onclick = () => publishAgenda(button.dataset.publishAgenda).catch(error => alert(error.message)));
+  document.querySelectorAll('[data-edit-agenda]').forEach(button => {
+    button.onclick = () => openAgendaModal(button.dataset.editAgenda, button.dataset.focusSchedule === '1');
+  });
+  document.querySelectorAll('[data-delete-agenda]').forEach(button => button.onclick = () => deleteAgenda(button.dataset.deleteAgenda));
+  document.querySelectorAll('[data-history-agenda]').forEach(button => {
+    button.onclick = () => {
+      const history = $(`history-${button.dataset.historyAgenda}`);
+      if (history) history.hidden = !history.hidden;
+    };
+  });
+}
+
+$('publishSelected').onclick = async () => {
+  const selected = allEvents().filter(event => dataOf(event).selected);
+  if (!selected.length) return alert('Selecione pelo menos uma informação.');
+  for (const event of selected) await publishEvent(event);
+};
+
+$('quickPublish').onclick = async () => {
+  const text = $('quickText').value.trim();
+  if (!text) return alert('Digite a informação.');
+  const channel = $('quickChannel').value;
+  await command({
+    type: 'show',
+    region: channel,
+    payload: channel === 'side-alert'
+      ? { label: 'INFORMAÇÃO', headline: 'AGORA NA REDAÇÃO', summary: text }
+      : { label: 'AGORA', text }
+  });
+  editorial.published = [{ id: `quick-${Date.now()}`, kind: 'quick', text, publishedAt: nowIso() }, ...(editorial.published || [])].slice(0, 100);
+  persist();
+  $('quickText').value = '';
+  $('newsflashText').textContent = text;
+  render();
+};
+
+function fillMatchOptions(selected = '') {
+  $('agendaMatch').innerHTML = [
+    '<option value="">Sem partida relacionada</option>',
+    ...getMatches().map(match => `<option value="${match.id}" ${match.id === selected ? 'selected' : ''}>${esc(club(match.homeClubId).shortName)} × ${esc(club(match.awayClubId).shortName)} — ${esc(match.competition || 'Competição')}</option>`)
+  ].join('');
+}
+
+function openAgendaModal(id = '', focusSchedule = false) {
+  const agenda = (editorial.agendas || []).find(item => item.id === id);
+  $('agendaForm').reset();
+  $('agendaId').value = agenda?.id || '';
+  $('agendaModalTitle').textContent = agenda ? 'Editar pauta' : 'Nova pauta';
+  $('agendaTitle').value = agenda?.title || '';
+  $('agendaDescription').value = agenda?.description || '';
+  $('agendaPriority').value = agenda?.priority || 'NORMAL';
+  $('agendaCategory').value = agenda?.category || 'Geral';
+  $('agendaAuthor').value = agenda?.author || 'Redação RodriGol';
+  $('agendaStatus').value = agenda?.status || 'RECEIVED';
+  $('agendaChannel').value = agenda?.channel || 'ticker';
+  $('agendaSchedule').value = agenda?.scheduledAt ? new Date(agenda.scheduledAt).toISOString().slice(0, 16) : '';
+  fillMatchOptions(agenda?.matchId || '');
+  $('agendaModal').classList.add('open');
+  $('agendaModal').setAttribute('aria-hidden', 'false');
+  setTimeout(() => (focusSchedule ? $('agendaSchedule') : $('agendaTitle')).focus(), 0);
+}
+
+function closeAgendaModal() {
+  $('agendaModal').classList.remove('open');
+  $('agendaModal').setAttribute('aria-hidden', 'true');
+}
+
+function deleteAgenda(id) {
+  const agenda = (editorial.agendas || []).find(item => item.id === id);
+  if (!agenda || !confirm(`Excluir a pauta “${agenda.title}”?`)) return;
+  editorial.agendas = (editorial.agendas || []).filter(item => item.id !== id);
+  persist();
+  render();
+}
+
+$('agendaForm').onsubmit = event => {
+  event.preventDefault();
+  const title = $('agendaTitle').value.trim();
+  if (!title) return;
+  const id = $('agendaId').value || `agenda-${Date.now()}`;
+  const previous = (editorial.agendas || []).find(item => item.id === id);
+  const scheduledValue = $('agendaSchedule').value;
+  let agenda = {
+    ...previous,
+    id,
+    title,
+    description: $('agendaDescription').value.trim(),
+    priority: $('agendaPriority').value,
+    category: $('agendaCategory').value,
+    matchId: $('agendaMatch').value,
+    author: $('agendaAuthor').value.trim() || 'Redação RodriGol',
+    status: $('agendaStatus').value,
+    channel: $('agendaChannel').value,
+    scheduledAt: scheduledValue ? new Date(scheduledValue).toISOString() : '',
+    createdAt: previous?.createdAt || nowIso()
+  };
+  if (agenda.scheduledAt && agenda.status !== 'PUBLISHED') agenda.status = 'SCHEDULED';
+  agenda = appendAgendaHistory(agenda, previous ? 'Pauta atualizada' : 'Pauta criada', agendaStatusLabel(agenda.status));
+  editorial.agendas = [agenda, ...(editorial.agendas || []).filter(item => item.id !== id)];
+  persist();
+  closeAgendaModal();
+  render();
+};
+
+$('agendaCancel').onclick = closeAgendaModal;
+$('agendaClose').onclick = closeAgendaModal;
+$('agendaModal').onclick = event => { if (event.target === $('agendaModal')) closeAgendaModal(); };
+window.addEventListener('keydown', event => { if (event.key === 'Escape' && $('agendaModal').classList.contains('open')) closeAgendaModal(); });
+
+$('refresh').onclick = render;
+$('globalSearch').oninput = render;
+$('newAgenda').onclick = () => openAgendaModal();
+document.querySelectorAll('[data-filter]').forEach(button => {
+  button.onclick = () => {
+    filter = button.dataset.filter;
+    document.querySelectorAll('[data-filter]').forEach(item => item.classList.toggle('selected', item === button));
+    render();
+    $('agendaPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+});
+
+async function health() {
+  try {
+    const response = await fetch('/health', { cache: 'no-store' });
+    if (!response.ok) throw new Error('Bridge indisponível');
+    const data = await response.json();
+    $('bridgeStatus').textContent = `Online · ${data.connections} overlay(s)`;
+  } catch {
+    $('bridgeStatus').textContent = 'Bridge indisponível';
+  }
+}
+
+async function publishScheduled() {
+  const now = Date.now();
+  const dueAgendas = (editorial.agendas || []).filter(agenda =>
+    agenda.status === 'SCHEDULED' &&
+    agenda.scheduledAt &&
+    new Date(agenda.scheduledAt).getTime() <= now &&
+    !agenda.publishedAt
+  );
+  for (const agenda of dueAgendas) {
+    try { await publishAgenda(agenda.id, true); } catch { /* tenta novamente no próximo ciclo */ }
+  }
+
+  const currentTime = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  for (const event of allEvents().filter(item => statusOf(item) === 'SCHEDULED' && dataOf(item).scheduledTime === currentTime)) {
+    try { await publishEvent(event); } catch { /* tenta novamente no próximo ciclo */ }
+  }
+}
+
+setInterval(() => {
+  $('now').textContent = new Date().toLocaleTimeString('pt-BR');
+  $('today').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
+}, 1000);
+setInterval(health, 3000);
+setInterval(publishScheduled, 15000);
+window.addEventListener('storage', () => { editorial = getEditorialState(); render(); });
+window.addEventListener('rodrigol:data-changed', event => {
+  if (event.detail?.key === 'rodrigol-editorial-v1') editorial = getEditorialState();
+  render();
+});
+
+render();
+health();
+publishScheduled();
