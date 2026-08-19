@@ -378,10 +378,47 @@ function publicHighlights(){
   const items=Array.isArray(raw.items)?raw.items:[];
   return items.filter(item=>item&&item.active!==false&&String(item.title||"").trim()).sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0)).slice(0,8).map(item=>({id:item.id||"",eyebrow:item.eyebrow||"DESTAQUE RODRIGOL",title:item.title||"",lead:item.lead||"",href:item.href||"#home",meta:item.meta||"",type:item.type||"CUSTOM",targetId:item.targetId||""}));
 }
+function publicLiveMatches(){
+  const byId=new Map();
+  for(const stored of publicArray(PUBLIC_KEYS.matches)){
+    const base=publicMatch(stored),live=publicRegionMatch(stored.id,base),match=mergePublicMatch(base,live);
+    if(match?.live)byId.set(String(match.id),match);
+  }
+  const regionCandidates=[];
+  const summary=regionState.get("round-summary")?.payload;
+  if(Array.isArray(summary))regionCandidates.push(...summary);
+  const publicAll=regionState.get("public-match-data")?.payload;
+  if(Array.isArray(publicAll))regionCandidates.push(...publicAll);
+  for(const item of regionCandidates){
+    const id=item?.matchId||item?.id;if(!id)continue;
+    const match=publicRegionMatch(id);
+    if(match?.live)byId.set(String(match.id),match);
+  }
+  return [...byId.values()].sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||String(a.time||'').localeCompare(String(b.time||'')));
+}
+function unionPublicMatches(...groups){
+  const byId=new Map();
+  for(const group of groups)for(const match of group||[])if(match)byId.set(String(match.id||`${match.date}|${match.time}|${match.home?.name}|${match.away?.name}`),match);
+  return [...byId.values()].sort((a,b)=>Number(Boolean(b.live))-Number(Boolean(a.live))||String(a.date||'').localeCompare(String(b.date||''))||String(a.time||'').localeCompare(String(b.time||'')));
+}
+function backupRecords(backup={}){
+  const records=new Map();
+  const local=backup.localStorage||{};
+  for(const [key,raw] of Object.entries(local)){
+    if(!String(key).startsWith('rodrigol-')||['rodrigol-runtime-config-v2','rodrigol-runtime-config-v1','rodrigol-storage-error-v1'].includes(key))continue;
+    try{records.set(key,typeof raw==='string'?JSON.parse(raw):raw);}catch{}
+  }
+  const idb=backup.indexedDb||backup.assets||{};
+  for(const [key,value] of idb['data-records']||[])records.set(String(key),value);
+  for(const [id,value] of idb['club-crests']||[])if(value)records.set(`rodrigol-asset-club-crest:${id}`,value);
+  for(const [id,value] of idb['competition-logos']||[])if(value)records.set(`rodrigol-asset-competition-logo:${id}`,value);
+  return records;
+}
 function publicHome(date){
-  const target=publicDate(date),matches=publicMatchesForDate(target),standings=publicStandings(),news=publicNews(),highlights=publicHighlights();
+  const target=publicDate(date),matches=unionPublicMatches(publicMatchesForDate(target),publicLiveMatches()),standings=publicStandings(),news=publicNews(),highlights=publicHighlights();
   return {ok:true,generatedAt:new Date().toISOString(),date:target,revision:dataRevision,matches,standings:standings.slice(0,4),news:news.slice(0,6),highlights};
 }
+
 
 async function loadPersistentData(){
   try{
@@ -511,6 +548,21 @@ const server=createServer(async(request,response)=>{
   }
   if(pathname==="/api/public/standings"&&request.method==="GET"){json(response,200,{ok:true,generatedAt:new Date().toISOString(),standings:publicStandings()});return;}
   if(pathname==="/api/public/news"&&request.method==="GET"){json(response,200,{ok:true,generatedAt:new Date().toISOString(),news:publicNews()});return;}
+  if(pathname==="/api/data/import-backup"&&request.method==="POST"){
+    if(!requireAuth(request,response))return;
+    try{
+      const backup=JSON.parse(await readBody(request));
+      if(backup?.format!=="rodrigol-backup")throw new Error("Backup RodriGol inválido.");
+      const imported=backupRecords(backup);
+      persistentData.clear();
+      for(const [key,value] of imported)persistentData.set(key,value);
+      dataRevision+=1;
+      await queuePersistData();
+      broadcastDataChange("__backup_import__",{records:imported.size},false,"backup-import");
+      json(response,200,{ok:true,revision:dataRevision,records:imported.size});
+    }catch(error){json(response,400,{ok:false,error:error.message||"Falha ao importar backup."});}
+    return;
+  }
   if(pathname==="/api/data/snapshot"){if(!requireAuth(request,response))return;json(response,200,{ok:true,revision:dataRevision,records:Object.fromEntries(persistentData)});return;}
   if(pathname.startsWith("/api/data/")){
     if(!requireAuth(request,response))return;

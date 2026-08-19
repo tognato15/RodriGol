@@ -1,8 +1,8 @@
 {
   "name": "rodrigol-2",
-  "version": "2.2.2-rc.golive.1",
+  "version": "2.2.2-rc.golive.1.1",
   "private": true,
-  "description": "RodriGol Portal Go-Live 1 — baseline pronta para publicação remota.",
+  "description": "RodriGol Go-Live 1.1 — persistência central e jogos ao vivo multidiários.",
   "type": "module",
   "workspaces": [
     "apps/*",

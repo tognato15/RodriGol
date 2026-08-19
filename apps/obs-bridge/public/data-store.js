@@ -68,11 +68,19 @@ function reportStorageError(key, error, attemptedBytes = 0) {
   return detail;
 }
 function runtimeForDataSync(){
-  try { return JSON.parse(localStorage.getItem('rodrigol-runtime-config-v2') || '{}'); } catch { return {}; }
+  let saved={};
+  try { saved=JSON.parse(localStorage.getItem('rodrigol-runtime-config-v2') || '{}'); } catch {}
+  const localHost=['localhost','127.0.0.1','::1'].includes(location.hostname);
+  return {
+    ...saved,
+    bridgeHttp:String(saved.bridgeHttp||location.origin).replace(/\/$/,''),
+    remoteStorageEnabled:localHost?Boolean(saved.remoteStorageEnabled):true
+  };
 }
+
 function bridgeBaseForData(){ const cfg=runtimeForDataSync(); return String(cfg.bridgeHttp || location.origin).replace(/\/$/,''); }
 function authHeadersForData(extra={}){ const token=String(runtimeForDataSync().apiToken||'').trim(); return token?{...extra,Authorization:`Bearer ${token}`}:{...extra}; }
-function queueWidePersistence(key, value, deleted=false){
+function queueWidePersistence(key, value, deleted=false, syncRemote=true){
   if (!wideDataDb) return;
   const operation = new Promise((resolve,reject)=>{
     const tx=wideDataDb.transaction(WIDE_DATA_STORE,'readwrite');
@@ -83,7 +91,7 @@ function queueWidePersistence(key, value, deleted=false){
   pendingWideWrites.set(key,operation);
   operation.finally(()=>{if(pendingWideWrites.get(key)===operation)pendingWideWrites.delete(key);});
   const cfg=runtimeForDataSync();
-  if(cfg.remoteStorageEnabled){
+  if(cfg.remoteStorageEnabled&&syncRemote){
     fetch(`${bridgeBaseForData()}/api/data/${encodeURIComponent(key)}`,{
       method:deleted?'DELETE':'PUT',credentials:'include',headers:authHeadersForData({'Content-Type':'application/json'}),
       body:deleted?undefined:JSON.stringify({value,source:clientInstanceId})
@@ -161,10 +169,29 @@ async function loadWideData(){
   const legacyKeys=[];
   for(let index=0;index<localStorage.length;index+=1){const key=localStorage.key(index);if(key&&isWideDataKey(key))legacyKeys.push(key);}
   for(const key of legacyKeys){
-    if(!wideDataCache.has(key)){try{wideDataCache.set(key,JSON.parse(localStorage.getItem(key)));}catch{continue;}queueWidePersistence(key,wideDataCache.get(key),false);}
+    if(!wideDataCache.has(key)){try{wideDataCache.set(key,JSON.parse(localStorage.getItem(key)));}catch{continue;}queueWidePersistence(key,wideDataCache.get(key),false,false);}
   }
   await Promise.allSettled([...pendingWideWrites.values()]);
   for(const key of legacyKeys)localStorage.removeItem(key);
+}
+async function reconcileRemoteSnapshot(snapshot={}){
+  const records=snapshot.records||{};
+  const remoteKeys=new Set(Object.keys(records).filter(key=>isWideDataKey(key)));
+  for(const key of [...wideDataCache.keys()]){
+    if(remoteKeys.has(key))continue;
+    wideDataCache.delete(key);
+    queueWidePersistence(key,null,true,false);
+    window.dispatchEvent(new CustomEvent('rodrigol:data-changed',{detail:{key,value:null,source:'remote'}}));
+  }
+  for(const [key,value] of Object.entries(records)){
+    if(isRemoteAssetKey(key)){await applyRemoteAssetRecord(key,value);continue;}
+    if(!isWideDataKey(key))continue;
+    const before=JSON.stringify(wideDataCache.get(key));
+    const after=JSON.stringify(value);
+    wideDataCache.set(key,value);
+    queueWidePersistence(key,value,false,false);
+    if(before!==after)window.dispatchEvent(new CustomEvent('rodrigol:data-changed',{detail:{key,value,source:'remote'}}));
+  }
 }
 async function hydrateRemoteData(){
   const cfg=runtimeForDataSync(); if(!cfg.remoteStorageEnabled)return;
@@ -172,17 +199,19 @@ async function hydrateRemoteData(){
     const response=await fetch(`${bridgeBaseForData()}/api/data/snapshot`,{credentials:'include',headers:authHeadersForData()});
     if(!response.ok)throw new Error(`Servidor respondeu ${response.status}`);
     const snapshot=await response.json(); remoteDataRevision=Number(snapshot.revision)||0;
-    const records=snapshot.records||{};
-    if(Object.keys(records).length){
-      for(const [key,value] of Object.entries(records)){if(isRemoteAssetKey(key)){await applyRemoteAssetRecord(key,value);continue;}if(!isWideDataKey(key))continue;wideDataCache.set(key,value);queueWidePersistence(key,value,false);}
-    }else{
-      for(const [key,value] of wideDataCache)queueWidePersistence(key,value,false);
-    }
+    await reconcileRemoteSnapshot(snapshot);
   }catch(error){window.dispatchEvent(new CustomEvent('rodrigol:remote-storage-error',{detail:{error:error.message}}));}
 }
 async function pollRemoteData(){
   const cfg=runtimeForDataSync(); if(!cfg.remoteStorageEnabled||document.hidden)return;
-  try{const response=await fetch(`${bridgeBaseForData()}/api/data/snapshot`,{credentials:'include',headers:authHeadersForData()});if(!response.ok)return;const snapshot=await response.json();if((Number(snapshot.revision)||0)<=remoteDataRevision)return;remoteDataRevision=Number(snapshot.revision)||0;for(const [key,value] of Object.entries(snapshot.records||{})){if(isRemoteAssetKey(key)){await applyRemoteAssetRecord(key,value);continue;}if(!isWideDataKey(key))continue;const before=JSON.stringify(wideDataCache.get(key));const after=JSON.stringify(value);if(before!==after){wideDataCache.set(key,value);queueWidePersistence(key,value,false);window.dispatchEvent(new CustomEvent('rodrigol:data-changed',{detail:{key,value,source:'remote'}}));}}}catch{}
+  try{
+    const response=await fetch(`${bridgeBaseForData()}/api/data/snapshot`,{credentials:'include',headers:authHeadersForData()});
+    if(!response.ok)return;
+    const snapshot=await response.json();
+    if((Number(snapshot.revision)||0)<=remoteDataRevision)return;
+    remoteDataRevision=Number(snapshot.revision)||0;
+    await reconcileRemoteSnapshot(snapshot);
+  }catch{}
 }
 await loadWideData().catch(error=>reportStorageError('wide-data',error));
 await hydrateRemoteData();

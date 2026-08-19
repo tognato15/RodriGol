@@ -10,10 +10,11 @@ const steps=[
 console.log("\nRODRIGOL STUDIO · PREFLIGHT OPERACIONAL\n");
 for(const [label,args] of steps){
   console.log(`\n▶ ${label}`);
-  const result=spawnSync(npm,args,{stdio:"inherit",shell:false});
+  const result=spawnSync(npm,args,{stdio:"inherit",shell:process.platform==="win32"});
   if(result.status!==0){
     console.error(`\n✖ PREFLIGHT INTERROMPIDO EM: ${label}`);
     process.exit(result.status||1);
   }
 }
 console.log("\n✓ PREFLIGHT OPERACIONAL APROVADO\n");
+

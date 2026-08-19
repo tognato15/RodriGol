@@ -1,8 +1,8 @@
 {
   "name": "@rodrigol/obs-bridge",
-  "version": "2.2.2-rc.golive.1",
+  "version": "2.2.2-rc.golive.1.1",
   "private": true,
-  "description": "RodriGol Go-Live 1 — servidor preparado para volume persistente e nuvem.",
+  "description": "RodriGol Go-Live 1.1 — base central compartilhada e portal live multidiário.",
   "type": "module",
   "scripts": {
     "dev": "node server.mjs",
