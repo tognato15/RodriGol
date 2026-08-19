@@ -1,82 +1,79 @@
-<!doctype html>
+<!DOCTYPE html>
+
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>RodriGol — Central de Coberturas</title>
-  <link rel="stylesheet" href="/control/central.css">
-</head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>RodriGol — Central de Coberturas</title>
+<link href="/control/central.css" rel="stylesheet"/>
+<link href="/control/admin-consolidation.css" rel="stylesheet"/><link href="/control/global-nav.css" rel="stylesheet"/><link href="/control/design-system.css" rel="stylesheet"/></head>
 <body>
 <header class="topbar">
-  <div class="brand">RODRIGOL <b>TV</b><small>SISTEMA OPERACIONAL DE REDAÇÃO ESPORTIVA</small></div>
-  <div class="newsflash"><span>AGORA NA REDAÇÃO</span><strong id="newsflashText">Central pronta para operar</strong></div>
-  <div class="search-top">⌕ <input id="globalSearch" placeholder="Buscar cobertura, competição ou clube..."></div>
-  <div class="top-time"><b id="now">--:--:--</b><small id="today">--</small></div>
+<div class="brand">RODRIGOL <b>STUDIO</b></div>
+<div class="newsflash"><span>AGORA NA REDAÇÃO</span><strong id="newsflashText">Central pronta para operar</strong></div>
+<div class="search-top">⌕ <input id="globalSearch" placeholder="Buscar cobertura, competição ou clube..."/></div>
+<div class="top-time"><b id="now">--:--:--</b><small id="today">--</small></div>
 </header>
 <div class="shell">
-  <aside class="sidebar">
-    <a href="/control/central.html" class="active">▣ Central de Coberturas</a>
-    <a href="/control/">◉ Cabine de Cobertura</a>
-    <a href="/control/multicabine.html">▦ Multicabine</a><a href="/control/ticker.html">▰ Central do Ticker</a><a href="/control/editorial.html">☷ Mesa Editorial</a><a href="/control/news.html">▤ Notícias</a><a href="/control/history.html">◷ Histórico</a>
-    <a href="/control/matches.html">▤ Editor de Partidas</a>
-    <a href="/control/clubs.html">⚽ Editor de Clubes</a>
-    <h4>ATALHOS</h4>
-    <button id="newCoverage">＋ Nova cobertura</button>
-    <button id="openActive">▶ Abrir cobertura ativa</button>
-    <button id="refreshData">↻ Atualizar central</button>
-    <h4>FILTROS RÁPIDOS</h4>
-    <button data-quick="LIVE">● Ao vivo</button>
-    <button data-quick="PRE_GAME">◷ Pré-jogo</button>
-    <button data-quick="FINAL">✓ Encerradas</button>
-    <button data-quick="ALL">≡ Todas</button>
-  </aside>
-
-  <main class="workspace">
-    <section class="hero panel">
-      <div>
-        <h1>CENTRAL DE COBERTURAS</h1>
-        <p>Gerencie todas as partidas e abra a Cabine com um clique.</p>
-      </div>
-      <div class="hero-actions">
-        <button class="btn" id="toggleView">▦ Cards</button>
-        <a class="btn primary" href="/control/matches.html">＋ Nova partida</a>
-      </div>
-    </section>
-
-    <section class="summary-grid">
-      <article class="summary panel"><span>TOTAL</span><b id="totalCount">0</b><small>Coberturas cadastradas</small></article>
-      <article class="summary panel live"><span>AO VIVO</span><b id="liveCount">0</b><small>Em andamento agora</small></article>
-      <article class="summary panel pre"><span>PRÉ-JOGO</span><b id="preCount">0</b><small>Aguardando início</small></article>
-      <article class="summary panel final"><span>ENCERRADAS</span><b id="finalCount">0</b><small>Partidas finalizadas</small></article>
-    </section>
-
-    <section class="filters panel">
-      <input id="search" placeholder="Buscar por partida, competição, rodada ou local">
-      <select id="statusFilter">
-        <option value="ALL">Todas as situações</option>
-        <option value="PRE_GAME">Pré-jogo</option>
-        <option value="LIVE">Ao vivo</option>
-        <option value="HALFTIME">Intervalo</option>
-        <option value="FINAL">Encerradas</option>
-      </select>
-      <select id="competitionFilter"><option value="ALL">Todas as competições</option></select>
-      <input id="dateFilter" type="date" title="Filtrar por data">
-      <button id="clearFilters" class="btn">Limpar</button>
-    </section>
-
-    <section class="panel content-panel">
-      <div class="section-head"><div><h2>COBERTURAS</h2><small id="resultCount">0 resultados</small></div><span id="activeLabel">Nenhuma cobertura ativa</span></div>
-      <div id="coverageList" class="coverage-list"></div>
-    </section>
-  </main>
-
-  <aside class="rightbar">
-    <section class="panel"><div class="side-head"><h3>RESUMO OPERACIONAL</h3><span class="dot"></span></div><div id="operationalSummary" class="operational"></div></section>
-    <section class="panel"><h3>PRÓXIMAS PARTIDAS</h3><div id="upcomingList" class="upcoming"></div></section>
-    <section class="panel"><h3>AÇÕES RÁPIDAS</h3><div class="quick-grid"><a href="/control/matches.html">＋ Partida</a><a href="/control/clubs.html">⚽ Clube</a><a href="/control/">◉ Cabine</a><button id="clearFinished">⌫ Limpar encerradas</button></div></section>
-  </aside>
+<aside class="sidebar">
+<a class="active" href="/control/central.html">▣ Central de Coberturas</a>
+<a href="/control/overlay-control.html">▰ Central do Overlay</a>
+<a href="/control/">◉ Cabine de Cobertura</a>
+<a href="/control/multicabine.html">▦ Multicabine</a><a href="/control/ticker.html">▰ Central de Destaques</a><a href="/control/editorial.html">☷ Mesa Editorial</a><a href="/control/news.html">▤ Notícias</a><a href="/control/history.html">◷ Histórico</a>
+<a href="/control/matches.html">▤ Editor de Partidas</a>
+<a href="/control/clubs.html">⚽ Editor de Clubes</a>
+<h4>ATALHOS</h4>
+<button id="newCoverage">＋ Nova cobertura</button>
+<button id="openActive">▶ Abrir cobertura ativa</button>
+<button id="refreshData">↻ Atualizar central</button>
+<h4>FILTROS RÁPIDOS</h4>
+<button data-quick="LIVE">● Ao vivo</button>
+<button data-quick="PRE_GAME">◷ Pré-jogo</button>
+<button data-quick="FINAL">✓ Encerradas</button>
+<button data-quick="ALL">≡ Todas</button>
+<a href="/control/competitions.html">🏆 Editor de Competições</a></aside>
+<main class="workspace">
+<section class="hero panel">
+<div>
+<h1>CENTRAL DE COBERTURAS</h1>
+<p>Gerencie todas as partidas e abra a Cabine com um clique.</p>
+</div>
+<div class="hero-actions">
+<button class="btn" id="toggleView">▦ Cards</button>
+<a class="btn primary" href="/control/matches.html">＋ Nova partida</a>
+</div>
+</section>
+<section class="summary-grid">
+<article class="summary panel"><span>TOTAL</span><b id="totalCount">0</b><small>Coberturas cadastradas</small></article>
+<article class="summary panel live"><span>AO VIVO</span><b id="liveCount">0</b><small>Em andamento agora</small></article>
+<article class="summary panel pre"><span>PRÉ-JOGO</span><b id="preCount">0</b><small>Aguardando início</small></article>
+<article class="summary panel final"><span>ENCERRADAS</span><b id="finalCount">0</b><small>Partidas finalizadas</small></article>
+</section>
+<section class="filters panel">
+<input id="search" placeholder="Buscar por partida, competição, rodada ou local"/>
+<select id="statusFilter">
+<option value="ALL">Todas as situações</option>
+<option value="PRE_GAME">Pré-jogo</option>
+<option value="LIVE">Ao vivo</option>
+<option value="HALFTIME">Intervalo</option>
+<option value="FINAL">Encerradas</option>
+</select>
+<select id="competitionFilter"><option value="ALL">Todas as competições</option></select>
+<input id="dateFilter" title="Filtrar por data" type="date"/>
+<button class="btn" id="clearFilters">Limpar</button>
+</section>
+<section class="panel content-panel">
+<div class="section-head"><div><h2>COBERTURAS</h2><small id="resultCount">0 resultados</small></div><span id="activeLabel">Nenhuma cobertura ativa</span></div>
+<div class="coverage-list" id="coverageList"></div>
+</section>
+</main>
+<aside class="rightbar">
+<section class="panel"><div class="side-head"><h3>RESUMO OPERACIONAL</h3><span class="dot"></span></div><div class="operational" id="operationalSummary"></div></section>
+<section class="panel"><h3>PRÓXIMAS PARTIDAS</h3><div class="upcoming" id="upcomingList"></div></section>
+<section class="panel"><h3>AÇÕES RÁPIDAS</h3><div class="quick-grid"><a href="/control/matches.html">＋ Partida</a><a href="/control/clubs.html">⚽ Clube</a><a href="/control/">◉ Cabine</a><button id="clearFinished">⌫ Limpar encerradas</button></div></section>
+</aside>
 </div>
 <footer class="statusbar"><div><i class="ok"></i><b>SISTEMA</b><span>Operacional</span></div><div><i class="ok"></i><b>CONECTIVIDADE</b><span id="bridgeStatus">Verificando...</span></div><div><i class="ok"></i><b>DADOS</b><span id="lastUpdate">Atualizados agora</span></div><div><b id="footerLive">0</b><span>AO VIVO</span></div><div><b id="footerTotal">0</b><span>COBERTURAS</span></div></footer>
-<script type="module" src="/control/central.js"></script>
-</body>
+<script src="/control/central.js" type="module"></script>
+<script defer="True" src="/control/global-nav.js"></script></body>
 </html>

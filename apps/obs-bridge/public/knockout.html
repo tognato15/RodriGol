@@ -1,0 +1,8 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>RodriGol — Mata-mata</title><link href="/control/editor.css" rel="stylesheet"/><link href="/control/design-system.css" rel="stylesheet"/><link href="/control/admin-consolidation.css" rel="stylesheet"/><link href="/control/global-nav.css" rel="stylesheet"/><link href="/control/knockout.css" rel="stylesheet"/></head><body>
+<header class="topbar"><div class="brand">RODRIGOL <b>STUDIO</b></div><h1>COMPETIÇÕES ELIMINATÓRIAS</h1><div class="actions"><button class="btn" id="recalculate">Atualizar classificados</button><button class="btn primary" id="saveAll">Salvar estrutura</button></div></header>
+<div class="layout"><aside class="sidebar"></aside><main class="workspace">
+<section class="panel"><div class="toolbar"><label class="grow">Competição<select id="competitionSelect"></select></label><label>Temporada<input id="season" placeholder="2026"/></label><button class="btn" id="addPhase">+ Nova fase</button></div><div class="notice" id="notice"></div></section>
+<section class="panel intro"><h2>Estrutura do mata-mata</h2><p>Crie fases e confrontos. Em partida única, vincule um jogo; em ida e volta, vincule duas partidas ou informe os placares separadamente. O agregado é calculado automaticamente e o classificado pode alimentar a fase seguinte.</p></section>
+<section id="phaseList" class="phase-list"></section>
+<section class="panel empty" id="emptyState">Escolha uma competição e crie a primeira fase.</section>
+</main></div><script type="module" src="/control/knockout.js"></script><script defer src="/control/global-nav.js"></script></body></html>

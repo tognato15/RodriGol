@@ -1,130 +1,145 @@
-<!doctype html>
+<!DOCTYPE html>
+
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>RodriGol — Cabine de Cobertura</title>
-  <link rel="stylesheet" href="/control/control.css">
-</head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>RodriGol — Cabine de Cobertura</title>
+<link href="/control/control.css" rel="stylesheet"/>
+<link href="/control/admin-consolidation.css" rel="stylesheet"/><link href="/control/global-nav.css" rel="stylesheet"/><link href="/control/design-system.css" rel="stylesheet"/></head>
 <body>
-<div class="compat-labels" aria-hidden="true">OPERAÇÃO RÁPIDA · REGISTRAR E PUBLICAR · OVERLAYS · PREVIEW</div>
+<div aria-hidden="true" class="compat-labels">OPERAÇÃO RÁPIDA · REGISTRAR E PUBLICAR · OVERLAYS · PREVIEW</div>
 <header class="topbar">
-  <div class="brand">RODRIGOL <b>TV</b><small>SISTEMA OPERACIONAL DE REDAÇÃO ESPORTIVA</small></div>
-  <div class="newsflash"><span>AGORA NA REDAÇÃO</span><strong id="newsflashText">Cobertura pronta para começar</strong></div>
-  <div class="top-actions"><span id="now">--:--:--</span><b id="status">Bridge conectando…</b></div>
+<div class="brand">RODRIGOL <b>STUDIO</b></div>
+<div class="newsflash"><span>AGORA NA REDAÇÃO</span><strong id="newsflashText">Cobertura pronta para começar</strong></div>
+<div class="top-actions"><span id="now">--:--:--</span><b id="status">Bridge conectando…</b></div>
 </header>
-
 <div class="app-shell">
-  <aside class="sidebar">
-    <a class="back link-button" href="/control/central.html">← Central de Coberturas</a>
-    <h4>NAVEGAÇÃO DA CABINE</h4>
-    <a class="nav link-button" href="/control/production.html">▦ Central de Produção</a><a class="nav link-button" href="/control/central.html">▣ Central de Coberturas</a>
-    <a class="nav link-button" href="/control/multicabine.html">▦ Multicabine</a>
-    <a class="nav link-button" href="/control/ticker.html">▰ Central do Ticker</a>
-    <a class="nav link-button" href="/control/editorial.html">☷ Mesa Editorial</a>
-    <button class="nav active" data-section="matchOverview">◉ Visão Geral</button>
-    <button class="nav" data-section="timelinePanel">◷ Cronologia</button>
-    <button class="nav" data-section="eventPanel">⚑ Eventos <span id="eventCount">0</span></button>
-    <button class="nav" data-section="lineupsPanel">♙ Escalações</button>
-    <button class="nav" data-section="diagnosticPanel">▥ Estatísticas</button>
-    <button class="nav" data-tool="note">✎ Notas & Apurações</button>
-    <a class="nav link-button" href="/control/news.html">▣ Mídia</a><a href="/control/history.html">◷ Histórico</a>
-    <a class="nav link-button" href="/control/news.html">▤ Publicações</a>
-    <a class="nav link-button" href="/control/clubs.html">⚙ Editor de Clubes</a>
-    <a class="nav link-button" href="/control/matches.html">▣ Editor de Partidas</a>
-    <h4>FERRAMENTAS RÁPIDAS</h4>
-    <button class="tool" data-tool="note">＋ Inserir Nota</button>
-    <button class="tool" data-tool="review">✓ Apuração Rápida</button>
-    <button class="tool" data-tool="publication">▤ Nova Publicação</button>
-  </aside>
-
-  <main class="workspace">
-    <section class="match-header panel" id="matchOverview">
-      <div class="team-block home">
-        <div class="crest pal" id="homeCrest">P</div>
-        <div><strong id="homeName">PALMEIRAS</strong><small id="homeScorers">—</small></div>
-        <b id="homeScoreText">0</b>
-      </div>
-      <div class="match-center">
-        <div class="phase-row"><span id="matchStatusBadge">PRÉ-JOGO</span><strong id="periodLabel">PRÉ-JOGO</strong></div>
-        <div id="onAirIndicator" class="on-air-indicator">○ ESTA PARTIDA NÃO ESTÁ NO AR</div>
-        <div class="clock" id="clockText">00:00</div>
-        <div class="clock-controls">
-          <button id="startClock">▶ Iniciar</button>
-          <button id="pauseClock">Ⅱ Pausar</button>
-          <button id="resetClock">↺ Zerar relógio</button>
-          <button id="clearCoverage" class="danger-ghost">⌫ Limpar cobertura</button>
-        </div>
-        <select id="matchPhase">
-          <option value="PRE_GAME">Pré-jogo</option>
-          <option value="FIRST_HALF">1º tempo</option>
-          <option value="HALFTIME">Intervalo</option>
-          <option value="SECOND_HALF">2º tempo</option>
-          <option value="EXTRA_TIME">Prorrogação</option>
-          <option value="PENALTIES">Pênaltis</option>
-          <option value="FINAL">Finalizada</option>
-        </select>
-        <p class="score-help">O placar é atualizado pelos gols registrados na cronologia.</p>
-      </div>
-      <div class="team-block away">
-        <b id="awayScoreText">0</b>
-        <div><strong id="awayName">RED BULL BRAGANTINO</strong><small id="awayScorers">—</small></div>
-        <div class="crest brag" id="awayCrest">RB</div>
-      </div>
-    </section>
-
-    <section class="status-strip panel">
-      <div><small>SITUAÇÃO DA COBERTURA</small><b id="coverageStatus">PRÉ-JOGO</b></div>
-      <div><small>COMPETIÇÃO</small><b id="competitionText">Brasileirão Série A</b></div>
-      <div><small>LOCAL</small><b id="venueText">Allianz Parque</b></div>
-      <div><small>SINCRONIZAÇÃO</small><b class="ok">TEMPO REAL</b></div>
-    </section>
-
-    <section class="event-panel panel" id="eventPanel">
-      <h3>REGISTRAR EVENTO</h3>
-      <div class="event-types" id="eventTypes">
-        <button class="event-type active" data-type="GOAL">⚽<span>GOL</span></button>
-        <button class="event-type yellow" data-type="YELLOW_CARD">▮<span>CARTÃO<br>AMARELO</span></button>
-        <button class="event-type red" data-type="RED_CARD">▮<span>CARTÃO<br>VERMELHO</span></button>
-        <button class="event-type blue" data-type="SUBSTITUTION">⇅<span>SUBSTITUIÇÃO</span></button>
-        <button class="event-type purple" data-type="VAR">VAR<span>VAR</span></button>
-        <button class="event-type info" data-type="INFORMATION">i<span>INFORMAÇÃO</span></button>
-        <button class="event-type gray" data-type="REVIEW">⌕<span>APURAÇÃO</span></button>
-      </div>
-      <div class="event-fields">
-        <label>Minuto<input id="minute" type="number" min="0" max="130" value="0"></label>
-        <label>Equipe<select id="team"><option value="HOME">Mandante</option><option value="AWAY">Visitante</option><option value="NEUTRAL">Neutro</option></select></label>
-        <label>Jogador / título<input id="player" placeholder="Nome do jogador ou título"></label>
-        <label>Detalhes<input id="details" placeholder="Descreva o acontecimento"></label>
-        <button id="publishEvent" class="publish">⚡ REGISTRAR & PUBLICAR</button>
-      </div>
-      <div class="form-options"><label><input id="showTicker" type="checkbox" checked> Exibir no ticker</label><label><input id="showAlert" type="checkbox" checked> Exibir alerta lateral</label></div>
-    </section>
-
-    <section class="timeline panel" id="timelinePanel">
-      <div class="section-title"><h3>CRONOLOGIA DA PARTIDA</h3><button id="undoEvent">↶ Desfazer último</button></div>
-      <div id="timelineList" class="timeline-list"><div class="empty">Nenhum evento registrado.</div></div>
-    </section>
-
-    <section class="lineups panel" id="lineupsPanel">
-      <div class="section-title"><div><h3>ESCALAÇÕES</h3><small>Cadastre titulares, reservas e comissão técnica.</small></div><button id="saveLineups" type="button">Salvar escalações</button></div>
-      <div class="lineup-grid">
-        <div class="lineup-team"><h4 id="homeLineupTitle">MANDANTE</h4><label>Técnico<input id="homeCoach" placeholder="Nome do técnico"></label><label>Titulares<textarea id="homeStarters" rows="11" placeholder="Um jogador por linha. Ex.: 1 Weverton"></textarea></label><label>Reservas<textarea id="homeBench" rows="6" placeholder="Um jogador por linha"></textarea></label></div>
-        <div class="lineup-team"><h4 id="awayLineupTitle">VISITANTE</h4><label>Técnico<input id="awayCoach" placeholder="Nome do técnico"></label><label>Titulares<textarea id="awayStarters" rows="11" placeholder="Um jogador por linha"></textarea></label><label>Reservas<textarea id="awayBench" rows="6" placeholder="Um jogador por linha"></textarea></label></div>
-      </div>
-      <p id="lineupStatus" class="save-status"></p>
-    </section>
-
-    <section class="diagnostic panel" id="diagnosticPanel"><div class="section-title"><h3>DIAGNÓSTICO</h3></div><pre id="log">Sistema pronto.</pre></section>
-  </main>
-
-  <aside class="rightbar other-games-bar">
-    <div class="tabs"><b>OUTROS JOGOS</b><button id="setOnAir" type="button">COLOCAR NO AR</button></div>
-    <div id="otherMatchesRight" class="other-matches-list right-list"></div>
-  </aside>
+<aside class="sidebar">
+<a class="back link-button" href="/control/central.html">← Central de Coberturas</a>
+<h4>NAVEGAÇÃO DA CABINE</h4>
+<a class="nav link-button" href="/control/production.html">▦ Central de Produção</a><a class="nav link-button" href="/control/central.html">▣ Central de Coberturas</a>
+<a class="nav link-button" href="/control/multicabine.html">▦ Multicabine</a>
+<a class="nav link-button" href="/control/ticker.html">▰ Central de Destaques</a><a class="nav link-button" href="/control/portal-highlights.html">▰ Destaques do Portal</a>
+<a class="nav link-button" href="/control/editorial.html">☷ Mesa Editorial</a>
+<button class="nav active" data-section="matchOverview">◉ Visão Geral</button>
+<button class="nav" data-section="timelinePanel">◷ Cronologia</button>
+<button class="nav" data-section="eventPanel">⚑ Eventos <span id="eventCount">0</span></button>
+<button class="nav" data-section="lineupsPanel">♙ Escalações</button>
+<button class="nav" data-section="diagnosticPanel">▥ Estatísticas</button>
+<button class="nav" data-tool="note">✎ Notas &amp; Apurações</button>
+<a class="nav link-button" href="/control/news.html">▣ Mídia</a><a href="/control/history.html">◷ Histórico</a>
+<a class="nav link-button" href="/control/news.html">▤ Publicações</a>
+<a class="nav link-button" href="/control/clubs.html">⚙ Editor de Clubes</a>
+<a class="nav link-button" href="/control/matches.html">▣ Editor de Partidas</a>
+<h4>FERRAMENTAS RÁPIDAS</h4>
+<button class="tool" data-tool="note">＋ Inserir Nota</button>
+<button class="tool" data-tool="review">✓ Apuração Rápida</button>
+<button class="tool" data-tool="publication">▤ Nova Publicação</button>
+<a href="/control/competitions.html">🏆 Editor de Competições</a></aside>
+<main class="workspace">
+<section class="match-header panel" id="matchOverview">
+<div class="team-block home">
+<div class="crest pal" id="homeCrest">P</div>
+<div><strong id="homeName">PALMEIRAS</strong><small id="homeScorers">—</small></div>
+<b id="homeScoreText">0</b>
 </div>
-
+<div class="match-center">
+<div class="phase-row"><span id="matchStatusBadge">PRÉ-JOGO</span><strong id="periodLabel">PRÉ-JOGO</strong></div>
+<div class="on-air-indicator" id="onAirIndicator">○ ESTA PARTIDA NÃO ESTÁ NO AR</div>
+<div class="clock" id="clockText">00:00</div>
+<div class="clock-controls">
+<button id="startClock">▶ Iniciar</button>
+<button id="pauseClock">Ⅱ Pausar</button>
+<button id="resetClock">↺ Zerar relógio</button>
+<button class="danger-ghost" id="clearCoverage">⌫ Limpar cobertura</button>
+</div>
+<select id="matchPhase">
+<option value="PRE_GAME">Pré-jogo</option>
+<option value="FIRST_HALF">1º tempo</option>
+<option value="LIVE_UNKNOWN">Em andamento — sem relógio</option>
+<option value="HALFTIME">Intervalo</option>
+<option value="SECOND_HALF">2º tempo</option>
+<option value="EXTRA_TIME">Prorrogação</option>
+<option value="PENALTIES">Pênaltis</option>
+<option value="FINAL">Finalizada</option>
+</select>
+<p class="score-help">O placar é atualizado pelos gols registrados na cronologia.</p>
+</div>
+<div class="team-block away">
+<b id="awayScoreText">0</b>
+<div><strong id="awayName">RED BULL BRAGANTINO</strong><small id="awayScorers">—</small></div>
+<div class="crest brag" id="awayCrest">RB</div>
+</div>
+</section>
+<section class="status-strip panel">
+<div><small>SITUAÇÃO DA COBERTURA</small><b id="coverageStatus">PRÉ-JOGO</b></div>
+<div><small>COMPETIÇÃO</small><b id="competitionText">Brasileirão Série A</b></div>
+<div><small>LOCAL</small><b id="venueText">Allianz Parque</b></div>
+<div><small>SINCRONIZAÇÃO</small><b class="ok">TEMPO REAL</b></div>
+</section>
+<section class="match-facts panel" id="matchFactsPanel">
+<div class="section-title"><div><h3>DADOS DA PARTIDA</h3><small>Atualize as informações exibidas no card principal do overlay.</small></div><button id="saveMatchFacts" type="button">Salvar dados</button></div>
+<div class="match-facts-grid">
+<label>Árbitro<input id="matchReferee" placeholder="Nome do árbitro"/></label>
+<label>Público<input id="matchAttendance" inputmode="numeric" placeholder="Ex.: 43.275"/></label>
+<label>Clima<input id="matchWeather" placeholder="Ex.: 21°C · Nublado"/><button class="weather-action" id="fetchMatchWeather" type="button">☁ Buscar clima agora</button><small class="weather-status" id="matchWeatherLookupStatus"></small></label>
+</div>
+<p class="save-status" id="matchFactsStatus"></p>
+</section>
+<section class="event-panel panel" id="eventPanel">
+<h3>REGISTRAR EVENTO</h3>
+<div class="event-types" id="eventTypes">
+<button class="event-type active" data-type="GOAL">⚽<span>GOL</span></button>
+<button class="event-type yellow" data-type="YELLOW_CARD">▮<span>CARTÃO<br/>AMARELO</span></button>
+<button class="event-type red" data-type="RED_CARD">▮<span>CARTÃO<br/>VERMELHO</span></button>
+<button class="event-type blue" data-type="SUBSTITUTION">⇅<span>SUBSTITUIÇÃO</span></button>
+<button class="event-type purple" data-type="VAR">VAR<span>VAR</span></button>
+<button class="event-type info" data-type="INFORMATION">i<span>INFORMAÇÃO</span></button>
+<button class="event-type gray" data-type="REVIEW">⌕<span>APURAÇÃO</span></button>
+</div>
+<div class="event-fields">
+<label>Minuto<input id="minute" max="130" min="0" type="number" value="0"/></label>
+<label>Equipe<select id="team"><option value="HOME">Mandante</option><option value="AWAY">Visitante</option><option value="NEUTRAL">Neutro</option></select></label>
+<label id="genericPlayerField">Jogador / título
+<input id="player" list="eventPlayerList" autocomplete="off" placeholder="Selecione ou digite o jogador"/>
+<datalist id="eventPlayerList"></datalist>
+</label>
+<div class="substitution-fields" id="substitutionFields" hidden>
+<label>Jogador que sai
+  <input id="substitutionOut" list="substitutionOutList" autocomplete="off" placeholder="Selecione ou digite quem sai"/>
+  <datalist id="substitutionOutList"></datalist>
+</label>
+<label>Jogador que entra
+  <input id="substitutionIn" list="substitutionInList" autocomplete="off" placeholder="Selecione ou digite quem entra"/>
+  <datalist id="substitutionInList"></datalist>
+</label>
+</div>
+<label>Detalhes / narração<input id="details" placeholder="Ex.: Finalização após cruzamento pela direita..."/></label>
+<button class="publish" id="publishEvent">⚡ REGISTRAR &amp; PUBLICAR</button>
+</div>
+<div class="form-options"><small>Eventos da Cabine alimentam a cronologia e o overlay operacional, mas não a Central de Destaques editorial.</small></div>
+</section>
+<section class="timeline panel" id="timelinePanel">
+<div class="section-title"><h3>CRONOLOGIA DA PARTIDA</h3><button id="undoEvent">↶ Desfazer último</button></div>
+<div class="timeline-list" id="timelineList"><div class="empty">Nenhum evento registrado.</div></div>
+</section>
+<section class="lineups panel" id="lineupsPanel">
+<div class="section-title"><div><h3>ESCALAÇÕES</h3><small>Cadastre titulares, reservas e comissão técnica.</small></div><button id="saveLineups" type="button">Salvar escalações</button></div>
+<div class="lineup-grid">
+<div class="lineup-team"><h4 id="homeLineupTitle">MANDANTE</h4><label>Técnico<input id="homeCoach" placeholder="Nome do técnico"/></label><label>Titulares<textarea id="homeStarters" placeholder="Um jogador por linha. Ex.: 1 Weverton" rows="11"></textarea></label><label>Reservas<textarea id="homeBench" placeholder="Um jogador por linha" rows="6"></textarea></label></div>
+<div class="lineup-team"><h4 id="awayLineupTitle">VISITANTE</h4><label>Técnico<input id="awayCoach" placeholder="Nome do técnico"/></label><label>Titulares<textarea id="awayStarters" placeholder="Um jogador por linha" rows="11"></textarea></label><label>Reservas<textarea id="awayBench" placeholder="Um jogador por linha" rows="6"></textarea></label></div>
+</div>
+<p class="save-status" id="lineupStatus"></p>
+</section>
+<section class="diagnostic panel" id="diagnosticPanel"><div class="section-title"><h3>DIAGNÓSTICO</h3></div><pre id="log">Sistema pronto.</pre></section>
+</main>
+<aside class="rightbar other-games-bar">
+<div class="tabs"><b>CENTRO OPERACIONAL</b><button id="setOnAir" type="button">COLOCAR NO AR</button></div>
+<div class="other-matches-list right-list" id="otherMatchesRight"></div>
+</aside>
+</div>
 <footer><span>● SISTEMA <b>Operacional</b></span><span>⌁ CONECTIVIDADE <b>Excelente</b></span><span>⟳ SINCRONIZAÇÃO <b>Em tempo real</b></span><button id="endCoverage">ENCERRAR COBERTURA</button></footer>
-<script type="module" src="/control/control.js"></script>
-</body>
+<script src="/control/control.js" type="module"></script>
+<script defer="True" src="/control/global-nav.js"></script></body>
 </html>

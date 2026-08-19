@@ -1,0 +1,10 @@
+node_modules
+.git
+.gitignore
+*.zip
+rg_*
+.DS_Store
+.vscode
+npm-debug.log*
+apps/obs-bridge/data/*
+!apps/obs-bridge/data/.gitkeep

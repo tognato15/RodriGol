@@ -1,6 +1,6 @@
 {
   "name": "@rodrigol/football",
-  "version": "0.2.0",
+  "version": "2.0.0-alpha.1",
   "private": true,
   "description": "Motor completo de domínio de futebol do RodriGol 2.0.",
   "type": "module",
@@ -22,6 +22,6 @@
     "clean": "node -e \"const fs=require('node:fs'); fs.rmSync('dist',{recursive:true,force:true});\""
   },
   "dependencies": {
-    "@rodrigol/core": "0.2.0"
+    "@rodrigol/core": "1.7.0"
   }
 }

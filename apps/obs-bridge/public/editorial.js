@@ -1,3 +1,4 @@
+import { publishCommand } from './bridge-client.js';
 import {
   getClubs,
   getMatches,
@@ -91,27 +92,80 @@ function textOf(event) {
   return event.details || `${event.label} em ${event.home.shortName} × ${event.away.shortName}`;
 }
 
-async function command(body) {
-  const response = await fetch('/api/commands', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error || 'Falha na publicação');
-  return data;
+const LEGACY_TO_STUDIO = {
+  ticker: 'editorial-highlight',
+  'side-alert': 'editorial-highlight',
+  'lower-third': 'studio-lower-third',
+  headline: 'studio-headline',
+  fullscreen: 'studio-fullscreen',
+  timeline: 'live-events',
+  newsroom: 'editorial-highlight'
+};
+
+function resolveStudioRegion(channel = 'ticker') {
+  if (channel === 'studio-breaking-ticker') return 'editorial-highlight';
+  return LEGACY_TO_STUDIO[channel] || channel || 'editorial-highlight';
 }
+
+function editorialHighlightPayload({ label = 'AGORA', text = '' } = {}) {
+  const headline = String(text || '').trim();
+  return {
+    label,
+    text: headline,
+    headlines: headline ? [{ text: headline }] : [],
+    mode: 'FIXED',
+    intervalSeconds: 10
+  };
+}
+
+function buildStudioPayload(region, payload = {}) {
+  if (region === 'editorial-highlight') {
+    return {
+      label: payload.label || 'INFORMAÇÃO',
+      headline: payload.headline || payload.text || '',
+      summary: payload.summary || '',
+      durationMs: payload.durationMs
+    };
+  }
+  if (region === 'editorial-highlight') {
+    const text = [payload.headline, payload.text, payload.summary].filter(Boolean).join(' — ');
+    return editorialHighlightPayload({ label: payload.label || 'AGORA', text });
+  }
+  if (region === 'studio-lower-third') {
+    return {
+      eyebrow: payload.eyebrow || payload.label || '',
+      headline: payload.headline || payload.text || '',
+      summary: payload.summary || ''
+    };
+  }
+  if (region === 'studio-headline') {
+    return {
+      label: payload.label || 'URGENTE',
+      headline: payload.headline || payload.text || ''
+    };
+  }
+  if (region === 'studio-fullscreen') {
+    return {
+      label: payload.label || 'RODRIGOL STUDIO',
+      headline: payload.headline || payload.text || '',
+      summary: payload.summary || ''
+    };
+  }
+  return payload;
+}
+
+async function command(body) { return publishCommand(body); }
 
 async function publishEvent(event) {
   const item = dataOf(event);
   const text = [titleOf(event), textOf(event)].filter(Boolean).join(' — ');
-  const region = item.channel || 'ticker';
+  const region = resolveStudioRegion(item.channel || 'ticker');
   await command({
     type: 'show',
     region,
-    payload: region === 'side-alert'
+    payload: buildStudioPayload(region, region === 'editorial-highlight'
       ? { label: event.label || 'INFORMAÇÃO', headline: titleOf(event), summary: textOf(event) }
-      : { label: `${event.minute ?? 0}'`, text }
+      : { label: `${event.minute ?? 0}'`, text })
   });
   editorial.items[event.id] = { ...item, status: 'PUBLISHED', publishedAt: nowIso(), selected: false };
   editorial.published = [
@@ -206,16 +260,16 @@ async function publishAgenda(id, automatic = false) {
   const agenda = (editorial.agendas || []).find(item => item.id === id);
   if (!agenda) return;
   const text = agendaPublicationText(agenda);
-  const channel = agenda.channel || 'ticker';
+  const region = resolveStudioRegion(agenda.channel || 'ticker');
   await command({
     type: 'show',
-    region: channel,
-    payload: channel === 'side-alert'
+    region,
+    payload: buildStudioPayload(region, region === 'editorial-highlight'
       ? { label: agenda.category || 'PAUTA', headline: agenda.title, summary: agenda.description || matchLabel(agenda.matchId) }
-      : { label: agenda.category || 'PAUTA', text }
+      : { label: agenda.category || 'PAUTA', text })
   });
   const publishedAt = nowIso();
-  const updated = appendAgendaHistory({ ...agenda, status: 'PUBLISHED', publishedAt }, automatic ? 'Publicação automática' : 'Publicada no overlay', channel);
+  const updated = appendAgendaHistory({ ...agenda, status: 'PUBLISHED', publishedAt }, automatic ? 'Publicação automática' : 'Publicada no overlay', region);
   editorial.agendas = (editorial.agendas || []).map(item => item.id === id ? updated : item);
   syncAgendaToNews(updated);
   editorial.published = [
@@ -389,13 +443,13 @@ $('publishSelected').onclick = async () => {
 $('quickPublish').onclick = async () => {
   const text = $('quickText').value.trim();
   if (!text) return alert('Digite a informação.');
-  const channel = $('quickChannel').value;
+  const region = resolveStudioRegion($('quickChannel').value);
   await command({
     type: 'show',
-    region: channel,
-    payload: channel === 'side-alert'
+    region,
+    payload: buildStudioPayload(region, region === 'editorial-highlight'
       ? { label: 'INFORMAÇÃO', headline: 'AGORA NA REDAÇÃO', summary: text }
-      : { label: 'AGORA', text }
+      : { label: 'AGORA', text })
   });
   editorial.published = [{ id: `quick-${Date.now()}`, kind: 'quick', text, publishedAt: nowIso() }, ...(editorial.published || [])].slice(0, 100);
   persist();
@@ -422,7 +476,7 @@ function openAgendaModal(id = '', focusSchedule = false) {
   $('agendaCategory').value = agenda?.category || 'Geral';
   $('agendaAuthor').value = agenda?.author || 'Redação RodriGol';
   $('agendaStatus').value = agenda?.status || 'RECEIVED';
-  $('agendaChannel').value = agenda?.channel || 'ticker';
+  $('agendaChannel').value = resolveStudioRegion(agenda?.channel || 'ticker');
   $('agendaSchedule').value = agenda?.scheduledAt ? new Date(agenda.scheduledAt).toISOString().slice(0, 16) : '';
   fillMatchOptions(agenda?.matchId || '');
   $('agendaModal').classList.add('open');
@@ -460,7 +514,7 @@ $('agendaForm').onsubmit = event => {
     matchId: $('agendaMatch').value,
     author: $('agendaAuthor').value.trim() || 'Redação RodriGol',
     status: $('agendaStatus').value,
-    channel: $('agendaChannel').value,
+    channel: resolveStudioRegion($('agendaChannel').value),
     scheduledAt: scheduledValue ? new Date(scheduledValue).toISOString() : '',
     createdAt: previous?.createdAt || nowIso()
   };

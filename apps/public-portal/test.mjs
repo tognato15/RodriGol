@@ -1,0 +1,1 @@
+import assert from "node:assert/strict";import {readFile} from "node:fs/promises";const html=await readFile(new URL("./public/index.html",import.meta.url),"utf8");assert.match(html,/Array\.isArray\(data\.highlights\)/);assert.match(html,/if\(managed\.length\)return managed/);console.log("Portal RC2B.4.2 OK");

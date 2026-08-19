@@ -1,0 +1,64 @@
+/* RodriGol Studio 6.19 — camada comum das telas administrativas.
+   Mantém os CSS específicos de cada módulo e padroniza apenas estrutura, tipografia e controles. */
+:root{--rg-admin-max:1920px}
+html,body{min-height:100%}
+body{margin:0;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.topbar .brand b{color:var(--rg-accent,#ff6a00)}
+.topbar .brand small{display:block;letter-spacing:.08em}
+.workspace,main{min-width:0}
+.workspace{max-width:var(--rg-admin-max);width:100%}
+.panel,.hero,.tools,.stats article,.featured,.article-list,.dialog,.reader{box-sizing:border-box}
+.panel h1,.panel h2,.panel h3,.hero h1{margin-top:0}
+.toolbar,.actions,.row-actions,.filters{gap:10px}
+label{min-width:0}
+label>input,label>select,label>textarea{width:100%;max-width:100%}
+input,select,textarea,button,.btn{font:inherit}
+button,.btn{cursor:pointer}
+button:disabled,.btn:disabled{cursor:not-allowed;opacity:.55;transform:none!important}
+.notice:empty{display:none}
+.notice:not(:empty){padding:10px 12px;border:1px solid var(--rg-line,#284554);border-radius:8px;background:#071923;color:var(--rg-muted,#91a6b2)}
+.field-grid>*{min-width:0}
+.table-wrap,.standing-editor,#clubList,#matchList,#roundList,#articleList{min-width:0}
+.modal[aria-hidden="true"]{pointer-events:none}
+.modal[aria-hidden="false"]{pointer-events:auto}
+.rg-local-title{letter-spacing:.13em}
+@media(max-width:1100px){.topbar{gap:12px}.topbar h1{font-size:18px}.workspace{padding:14px!important}}
+@media(max-width:760px){.topbar{position:relative;flex-wrap:wrap}.toolbar,.actions,.row-actions,.filters{align-items:stretch}.toolbar>*{max-width:100%}}
+
+/* 6.19.1 — assinatura visual aprovada do Overlay Studio */
+.topbar .brand{
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:7px!important;
+  min-width:max-content!important;
+  color:#ff5b00!important;
+  font-family:Arial Black,Inter,Segoe UI,Arial,sans-serif!important;
+  font-size:27px!important;
+  font-weight:950!important;
+  font-style:italic!important;
+  letter-spacing:-1.15px!important;
+  line-height:1!important;
+  text-transform:uppercase!important;
+  white-space:nowrap!important;
+}
+.topbar .brand b{
+  display:inline-block!important;
+  margin:0!important;
+  padding:4px 7px 3px!important;
+  border:0!important;
+  border-radius:4px!important;
+  background:#ff5b00!important;
+  color:#071018!important;
+  font-family:Arial Black,Inter,Segoe UI,Arial,sans-serif!important;
+  font-size:12px!important;
+  font-weight:950!important;
+  font-style:italic!important;
+  letter-spacing:.15px!important;
+  line-height:1!important;
+}
+.topbar .brand small{
+  display:none!important;
+}
+
+/* 6.19.2 — segunda passada de consolidação administrativa.
+   Versões antigas de sprint/beta foram retiradas da interface; versão técnica fica no pacote. */

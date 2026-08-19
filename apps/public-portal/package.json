@@ -1,0 +1,10 @@
+{
+  "name": "@rodrigol/public-portal",
+  "version": "0.4.2-rc.golive.1",
+  "private": true,
+  "description": "RodriGol Portal Go-Live 1 — funcionalidades RC2B.4.2 preservadas.",
+  "scripts": {
+    "check": "node test.mjs",
+    "test": "node test.mjs"
+  }
+}

@@ -3,42 +3,85 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>RodriGol Studio — Alpha 0.4.2</title>
+  <title>RodriGol Broadcast Package 2.0 — Card Principal 6.2</title>
+  <link rel="stylesheet" href="broadcast-design-system.css">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <main class="studio-overlay" aria-label="Overlay RodriGol Studio">
-    <header class="studio-topbar">
-      <section class="datetime" aria-label="Data e horário">
+    <header class="studio-topbar bp-header">
+      <section class="datetime bp-header__datetime" aria-label="Data e horário">
         <strong id="currentTime">--:--</strong>
         <div><b id="currentWeekday">---</b><span id="currentDate">-- DE -- DE ----</span></div>
       </section>
-      <section class="studio-brand"><div class="brand-name">RODRIGOL <b>STUDIO</b></div></section>
-      <section class="coverage-status">
+      <section class="studio-brand bp-header__brand" aria-label="Marca RodriGol Studio">
+        <div class="brand-name">RODRIGOL <b>STUDIO</b></div>
+      </section>
+      <section class="coverage-status bp-header__coverage" aria-label="Situação da cobertura">
+        <div id="presenterBlock" class="bp-presenter" hidden>
+          <div id="presenterAvatar" class="bp-presenter__avatar" aria-hidden="true">RT</div>
+          <div class="bp-presenter__copy"><strong id="presenterName"></strong><span id="presenterHandle"></span></div>
+        </div>
+        <div class="bp-live-copy"><b id="coverageTitle">COBERTURA AO VIVO</b><span id="coverageMessage">ACOMPANHANDO TODOS OS LANCES EM TEMPO REAL</span></div>
         <span class="live-dot" aria-hidden="true"></span>
-        <div><b id="coverageTitle">COBERTURA AO VIVO</b><span id="coverageMessage">ACOMPANHANDO TODOS OS LANCES EM TEMPO REAL</span></div>
       </section>
     </header>
 
     <section class="broadcast-grid">
       <div class="left-column">
         <article class="main-match-card" aria-label="Jogo principal">
-          <header class="section-header main-header"><span>JOGO PRINCIPAL</span><strong id="mainCompetition">CAMPEONATO BRASILEIRO · 18ª RODADA</strong><em id="mainStatus">AO VIVO</em></header>
-          <div class="main-match-body">
-            <section class="main-team home-team">
-              <div id="homeCrest" class="main-crest"><span>PAL</span></div>
-              <div class="team-copy"><strong id="homeName">PALMEIRAS</strong><small id="homeScorers">⚽ 12' R. Veiga · ⚽ 58' Flaco López</small></div>
-            </section>
-            <section class="score-center">
-              <div class="score-line"><b id="homeScore">2</b><i>×</i><b id="awayScore">1</b></div>
-              <div class="time-line"><strong id="mainClock">62:34</strong><span id="mainPeriod">2º TEMPO</span></div>
-              <small id="mainVenue">ALLIANZ PARQUE</small>
-            </section>
-            <section class="main-team away-team">
-              <div class="team-copy"><strong id="awayName">FLAMENGO</strong><small id="awayScorers">⚽ 37' Pedro</small></div>
-              <div id="awayCrest" class="main-crest"><span>FLA</span></div>
+          <div class="main-match-body bp-main-match bp-main-match--blueprint">
+            <div class="bp-match-context" aria-label="Contexto do jogo principal">
+              <span>JOGO PRINCIPAL</span>
+              <strong id="mainCompetition">CAMPEONATO BRASILEIRO · 18ª RODADA</strong>
+              <em id="mainStatus">AO VIVO</em>
+            </div>
+            <aside class="bp-match-summary" aria-label="Sumário da partida">
+              <header><span>☷</span><strong>SUMÁRIO DA PARTIDA</strong></header>
+              <div id="mainSummaryList" class="bp-match-summary__list"><p>Nenhum evento registrado.</p></div>
+            </aside>
+
+            <section class="bp-main-stage" aria-label="Placar do jogo principal">
+              <section class="main-team home-team bp-main-team" aria-label="Equipe mandante">
+                <div id="homeCrest" class="main-crest bp-main-crest"><span>MAN</span></div>
+                <div class="team-copy bp-team-copy">
+                  <strong id="homeName">MANDANTE</strong>
+                  <div class="bp-team-eventline"><small id="homeScorers">⚽ 12' R. Veiga · ⚽ 58' Flaco López</small></div>
+                </div>
+              </section>
+              <section class="score-center bp-score-center" aria-label="Placar da partida">
+                <div class="period-line bp-period" id="mainPeriod">2º TEMPO</div>
+                <div class="score-line"><b id="homeScore">2</b><i>×</i><b id="awayScore">1</b></div>
+                <div class="time-line bp-clock"><strong id="mainClock"></strong></div>
+                <div class="bp-venue"><small id="mainVenue">ALLIANZ PARQUE</small></div>
+              </section>
+              <section class="main-team away-team bp-main-team" aria-label="Equipe visitante">
+                <div id="awayCrest" class="main-crest bp-main-crest"><span>VIS</span></div>
+                <div class="team-copy bp-team-copy">
+                  <strong id="awayName">VISITANTE</strong>
+                  <div class="bp-team-eventline"><small id="awayScorers">⚽ 37' Pedro</small></div>
+                </div>
+              </section>
+
             </section>
           </div>
+          <section class="bp-lineups" aria-label="Escalações da partida">
+            <article class="bp-lineup-team bp-lineup-team--home">
+              <header><div id="lineupHomeCrest" class="bp-lineup-crest"><span>MAN</span></div><strong id="lineupHomeTitle">MANDANTE</strong><i class="bp-lineup-accent" aria-hidden="true"></i></header>
+              <p id="lineupHomePlayers">Escalação ainda não informada.</p>
+            </article>
+            <div id="lineupPitch" class="bp-lineup-facts" aria-label="Informações da partida">
+              <span><b>FASE</b><em id="mainFactPhase">—</em></span>
+              <span><b>DATA</b><em id="mainFactDate">—</em></span>
+              <span><b>PÚBLICO</b><em id="mainAttendance">—</em></span>
+              <span><b>ÁRBITRO</b><em id="mainReferee">—</em></span>
+              <span><b>CLIMA</b><em id="mainWeather">—</em></span>
+            </div>
+            <article class="bp-lineup-team bp-lineup-team--away">
+              <header><div id="lineupAwayCrest" class="bp-lineup-crest"><span>VIS</span></div><strong id="lineupAwayTitle">VISITANTE</strong><i class="bp-lineup-accent" aria-hidden="true"></i></header>
+              <p id="lineupAwayPlayers">Escalação ainda não informada.</p>
+            </article>
+          </section>
           <footer class="main-match-footer"><span id="mainMatchMessage">PARTIDA EM ANDAMENTO</span><span class="on-air"><i></i> NO AR</span></footer>
         </article>
 
@@ -46,31 +89,37 @@
           <div id="roundMatches" class="match-tiles"></div>
         </section>
 
-        <section class="round-summary" aria-label="Resumo da rodada">
-          <div class="summary-label"><b>AGORA NA RODADA</b></div>
-          <div class="summary-window"><div id="summaryTrack" class="summary-track"></div></div>
+        <section class="editorial-highlight editorial-highlight--inline" aria-label="Destaque editorial">
+          <div id="highlightCategory" class="highlight-label">DESTAQUE</div>
+          <div id="highlightWindow" class="highlight-window"><strong id="highlightText"></strong></div>
         </section>
 
         <section class="events-board" aria-label="Últimas ações">
-          <div class="events-title"><strong>ÚLTIMAS AÇÕES</strong><span>ATUALIZAÇÃO AUTOMÁTICA</span></div>
-          <div class="events-columns"><b>COMP.</b><b>AÇÃO</b><b>RESULTADO</b><b>TEMPO</b><b>AUTOR</b></div>
           <div id="eventsList" class="events-list"></div>
         </section>
       </div>
 
-      <aside class="side-carousel" aria-label="Painel lateral">
-        <header class="side-header"><strong id="sideTitle">JOGOS DA RODADA</strong><span id="sideCounter">1/3</span></header>
-        <div id="sideContent" class="side-content"></div>
-        <footer><span class="side-dot active"></span><span class="side-dot"></span><span class="side-dot"></span></footer>
+      <aside class="side-carousel side-carousel-split" aria-label="Painel lateral">
+        <section class="side-upper" aria-label="Carrossel superior da lateral">
+          <header class="side-header"><strong id="sideTitle">JOGOS DA RODADA</strong><span id="sideCounter">1/3</span></header>
+          <div id="sideContent" class="side-content"></div>
+          <footer><span class="side-dot active"></span><span class="side-dot"></span><span class="side-dot"></span></footer>
+        </section>
+        <section class="side-lower" aria-label="Carrossel editorial inferior">
+          <header class="side-lower-header"><strong id="sideLowerTitle">DESTAQUES</strong><span id="sideLowerCounter">0/0</span></header>
+          <div id="sideLowerContent" class="side-lower-content"><div class="side-lower-empty">Nenhum card selecionado</div></div>
+          <footer><span class="side-lower-dot active"></span><span class="side-lower-dot"></span><span class="side-lower-dot"></span></footer>
+        </section>
       </aside>
     </section>
 
-    <footer class="editorial-highlight" aria-label="Destaque editorial">
-      <div class="highlight-label">DESTAQUE</div>
-      <strong id="highlightText">BRASILEIRÃO NA RETA FINAL: ACOMPANHE TODOS OS JOGOS NO RODRIGOL STUDIO</strong>
-      <div class="social">@RODRIGOL.STUDIO</div>
+    <footer class="round-summary round-summary--footer" aria-label="Agora na rodada">
+      <div class="summary-label summary-label--social"><b>@RODRIGOL.STUDIO</b></div>
+      <div class="summary-window"><div id="summaryTrack" class="summary-track"></div></div>
     </footer>
-
+    <section id="studioLowerThird" class="studio-lower-third studio-command-region" hidden><small id="lowerThirdEyebrow"></small><strong id="lowerThirdHeadline"></strong><span id="lowerThirdSummary"></span></section>
+    <section id="studioHeadline" class="studio-headline studio-command-region" hidden><small id="headlineLabel"></small><strong id="headlineText"></strong></section>
+    <section id="studioFullscreen" class="studio-fullscreen studio-command-region" hidden><div><small id="fullscreenLabel"></small><strong id="fullscreenHeadline"></strong><span id="fullscreenSummary"></span></div></section>
     <div id="connection" class="connection" title="Conexão com o OBS Bridge"></div>
   </main>
   <script type="module" src="app.js"></script>

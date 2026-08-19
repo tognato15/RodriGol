@@ -1,0 +1,12 @@
+{
+  "product": "RodriGol Studio",
+  "release": "RC1",
+  "projectVersion": "2.2.2-rc.1",
+  "bridgeVersion": "2.2.2-rc.1",
+  "overlayVersion": "2.0.0-rc.1",
+  "functionalFreeze": true,
+  "observations": [
+    "live standings matchday validation",
+    "substitution player selection matchday validation"
+  ]
+}

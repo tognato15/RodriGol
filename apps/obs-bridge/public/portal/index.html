@@ -1,0 +1,416 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><meta name="theme-color" content="#071018"/><title>RodriGol — Futebol ao vivo</title><style>:root{--bg:#071018;--panel:#0b1c26;--panel2:#0f2733;--line:#274654;--orange:#ff5b00;--yellow:#ffd400;--text:#f7fbfd;--muted:#8ca5b3;--green:#38dc78}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#061017;color:var(--text);font-family:Inter,Segoe UI,Arial,sans-serif}.site-header{height:68px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 5vw;border-bottom:2px solid var(--orange);background:#061017;position:sticky;top:0;z-index:10}.brand{color:var(--orange);font-family:Arial Black,Impact,sans-serif;font-style:italic;font-weight:950;font-size:27px;letter-spacing:-1px;white-space:nowrap}.brand b{font-size:11px;background:var(--orange);color:#071018;padding:4px 6px;border-radius:3px;vertical-align:middle}.brand.small{font-size:20px}.site-header nav{display:flex;gap:26px}.site-header nav a{color:#b6c8d1;text-decoration:none;text-transform:uppercase;font-size:11px;font-weight:800}.site-header nav a:hover,.site-header nav a.active{color:#fff}.live-pill{justify-self:end;font-size:10px;font-weight:900;color:#fff;border:1px solid #28424f;border-radius:999px;padding:8px 11px}.live-pill span{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);margin-right:6px}.hero{min-height:320px;padding:62px 7vw 54px;display:flex;justify-content:space-between;align-items:flex-end;background:radial-gradient(circle at 75% 15%,#173746 0,transparent 35%),linear-gradient(145deg,#071018,#0a1e29);border-bottom:1px solid #1e3946}.eyebrow,.section-heading span{color:var(--orange);font-weight:900;font-size:11px;letter-spacing:.08em}.hero h1{font-family:Arial Black,Impact,sans-serif;font-style:italic;text-transform:uppercase;font-size:clamp(38px,5vw,72px);line-height:.92;margin:10px 0 18px;letter-spacing:-3px}.lead{color:#9eb2bd;max-width:560px;font-size:16px}.hero-clock{text-align:right}.hero-clock b{display:block;color:var(--orange);font:900 clamp(36px,5vw,70px)/1 Arial Black,Impact,sans-serif}.hero-clock small{font-size:11px;text-transform:uppercase;color:#96aab5}.section{padding:42px 7vw;border-bottom:1px solid #17313d}.section-heading{display:flex;justify-content:space-between;align-items:end;margin-bottom:20px}.section-heading h2{font:900 26px/1 Arial Black,Impact,sans-serif;text-transform:uppercase;margin:5px 0 0}.section-heading button{background:transparent;border:1px solid #355462;color:#fff;border-radius:6px;padding:9px 14px;font-weight:800;cursor:pointer}.match-groups{display:grid;gap:18px}.competition-block{border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--panel)}.competition-title{padding:12px 16px;background:linear-gradient(90deg,var(--orange),#c83e00);color:#071018;font-weight:950;text-transform:uppercase;font-size:12px}.matches{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:1px;background:#18323e}.match-card{background:#091923;padding:16px;min-height:128px;display:grid;grid-template-rows:auto 1fr auto;gap:12px}.match-meta{display:flex;justify-content:space-between;color:#87a1ae;font-size:10px;font-weight:800;text-transform:uppercase}.match-meta .live{color:var(--orange)}.match-teams{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px}.team{text-align:center;font-size:11px;font-weight:900;text-transform:uppercase}.team img,.crest-fallback{width:42px;height:42px;object-fit:contain;display:block;margin:0 auto 7px}.crest-fallback{border-radius:50%;display:grid;place-items:center;background:#193744;color:#fff}.score{font:900 25px/1 Arial Black,Impact,sans-serif;color:var(--orange);white-space:nowrap}.match-foot{text-align:center;color:#6f8996;font-size:9px}.standings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px}.standing-card{background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden}.standing-head{padding:14px 16px;border-bottom:2px solid var(--orange)}.standing-head b{display:block;text-transform:uppercase;font-size:12px}.standing-head small{color:#839ba8}.standing-row{display:grid;grid-template-columns:28px 1fr 34px 34px;align-items:center;padding:9px 14px;border-bottom:1px solid #17333f;font-size:11px}.standing-row:last-child{border:0}.standing-row .pos{color:var(--orange);font-weight:950}.standing-row .pts{font-weight:950;text-align:right}.standing-row .pj{text-align:right;color:#8099a6}.news-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}.news-card{border:1px solid var(--line);border-radius:9px;background:var(--panel);padding:18px}.news-card span{color:var(--orange);font-size:9px;font-weight:900;text-transform:uppercase}.news-card h3{font-size:17px;line-height:1.15;margin:8px 0}.news-card p{color:#96abb6;font-size:12px;line-height:1.5}.loading,.empty{padding:34px;border:1px dashed #294856;border-radius:8px;color:#78919f;text-align:center}footer{padding:24px 7vw;display:flex;align-items:center;gap:24px;background:#040b10;color:#8399a5;font-size:10px}footer p{flex:1}footer strong{color:var(--yellow)}@media(max-width:760px){.site-header{grid-template-columns:1fr auto;padding:0 18px}.site-header nav{display:none}.hero{padding:40px 20px;display:block}.hero-clock{text-align:left;margin-top:30px}.section{padding:32px 18px}.matches{grid-template-columns:1fr}.standings-grid{grid-template-columns:1fr}footer{align-items:flex-start;flex-direction:column;gap:8px}}
+.brand-link{text-decoration:none}
+.site-header nav a.active{color:#fff;position:relative}.site-header nav a.active:after{content:"";position:absolute;left:0;right:0;bottom:-23px;height:2px;background:var(--orange)}
+.text-link,.back-link{color:#d4e1e7;text-decoration:none;font-size:11px;font-weight:800}.text-link:hover,.back-link:hover{color:var(--orange)}
+.section-top{padding-top:64px;min-height:70vh}
+.match-card{cursor:pointer;transition:transform .14s ease,background .14s ease}.match-card:hover{background:#0d2230;transform:translateY(-1px)}
+.match-page-hero{min-height:calc(100vh - 68px);padding:34px 7vw 60px;background:radial-gradient(circle at 50% 0,#173746 0,transparent 40%),#061017}
+.match-page-hero .back-link{display:inline-block;margin-bottom:22px}
+.match-detail{max-width:1180px;margin:0 auto}
+.match-detail-top{border:1px solid var(--line);border-radius:12px;background:linear-gradient(145deg,#0a1c27,#091720);overflow:hidden}
+.match-competition{padding:11px 18px;background:linear-gradient(90deg,var(--orange),#c83e00);color:#071018;font-size:11px;font-weight:950;text-transform:uppercase}
+.match-scoreboard{display:grid;grid-template-columns:1fr auto 1fr;gap:24px;align-items:center;padding:36px 28px}
+.detail-team{text-align:center}.detail-team img,.detail-team .crest-fallback{width:86px;height:86px;margin:0 auto 12px}.detail-team strong{font-size:17px;text-transform:uppercase}
+.detail-score{text-align:center}.detail-score .status{display:inline-block;border:1px solid #355463;padding:6px 10px;border-radius:999px;font-size:10px;font-weight:900;text-transform:uppercase}.detail-score b{display:block;color:var(--orange);font:900 clamp(44px,7vw,80px)/1 Arial Black,Impact,sans-serif;margin:12px 0}.detail-score small{color:#8ea6b2}
+.match-detail-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:18px;margin-top:18px}
+.detail-panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}.detail-panel h3{margin:0;padding:13px 16px;border-bottom:1px solid #1f3b47;text-transform:uppercase;font-size:11px;color:var(--orange)}
+.timeline{padding:4px 0}.timeline-row{display:grid;grid-template-columns:46px 34px 1fr;align-items:start;padding:10px 14px;border-bottom:1px solid #17333f;font-size:11px}.timeline-row:last-child{border:0}.timeline-row time{color:#fff;font-weight:900}.timeline-row .event-icon{text-align:center}.timeline-row strong{display:block}.timeline-row small{display:block;color:#8097a3;margin-top:3px}
+.facts-list{display:grid;grid-template-columns:1fr 1fr}.fact{padding:14px;border-bottom:1px solid #17333f}.fact span{display:block;color:#718b98;font-size:9px;text-transform:uppercase}.fact strong{display:block;margin-top:4px;font-size:11px}
+.lineup-columns{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#17333f}.lineup-team{background:#091923;padding:14px}.lineup-team h4{margin:0 0 8px;color:#fff;font-size:11px}.lineup-team ul{list-style:none;padding:0;margin:0}.lineup-team li{font-size:10px;padding:3px 0;color:#b9c9d1}
+.standing-card.full .standing-row{grid-template-columns:28px 1fr 34px 34px 34px}.standing-row .sg{text-align:right;color:#8099a6}
+@media(max-width:800px){.match-scoreboard{grid-template-columns:1fr auto 1fr;padding:26px 12px;gap:10px}.detail-team img,.detail-team .crest-fallback{width:62px;height:62px}.detail-team strong{font-size:12px}.match-detail-grid{grid-template-columns:1fr}.lineup-columns{grid-template-columns:1fr}.facts-list{grid-template-columns:1fr 1fr}}
+
+.live-score-rail{height:58px;display:grid;grid-template-columns:118px 1fr;background:#081820;border-bottom:1px solid #294651;position:sticky;top:68px;z-index:9;overflow:hidden}.live-score-rail[hidden]{display:none}.live-score-label{display:flex;align-items:center;justify-content:center;gap:7px;border-right:1px solid #2a4653;color:#fff;font-size:9px;font-weight:950}.live-score-label span{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 9px var(--green)}.live-score-window{overflow:hidden;min-width:0}.live-score-track{height:100%;display:flex;width:max-content;min-width:100%;will-change:transform}.live-score-track.is-scrolling{animation:portalLiveScores var(--live-duration,34s) linear infinite}.live-score-copy{display:flex;flex:0 0 auto}.live-score-item{height:58px;min-width:250px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;padding:7px 13px;border-right:1px solid #23404d;text-decoration:none;color:#fff}.live-mini-team{display:flex;align-items:center;gap:6px;min-width:0;font-size:9px;font-weight:900;text-transform:uppercase}.live-mini-team.away{justify-content:flex-end;text-align:right}.live-mini-team img,.live-mini-team .crest-fallback{width:24px;height:24px;object-fit:contain;flex:0 0 24px;margin:0}.live-mini-team span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.live-mini-score{text-align:center;min-width:55px}.live-mini-score b{display:block;color:var(--orange);font:900 16px/1 Arial Black,Impact,sans-serif}.live-mini-score small{display:block;color:#7f9aa7;font-size:8px;margin-top:3px;white-space:nowrap}@keyframes portalLiveScores{from{transform:translate3d(0,0,0)}to{transform:translate3d(calc(-1 * var(--live-distance,0px)),0,0)}}
+.matches{display:block!important;background:#091923!important}.match-card{min-height:0!important;display:grid!important;grid-template-columns:66px minmax(0,1fr) 86px minmax(0,1fr) 112px!important;grid-template-rows:1fr!important;align-items:center!important;gap:10px!important;padding:10px 14px!important;background:#091923!important;border-bottom:1px solid #193440!important;cursor:pointer}.match-card:last-child{border-bottom:0!important}.match-card:hover{background:#0d2230!important;transform:none!important}.match-time{font-size:10px;font-weight:900;color:#9cb1bc;text-align:center}.match-list-team{display:flex;align-items:center;gap:9px;min-width:0;font-size:11px;font-weight:900;text-transform:uppercase}.match-list-team.away{justify-content:flex-end;text-align:right}.match-list-team img,.match-list-team .crest-fallback{width:30px;height:30px;object-fit:contain;flex:0 0 30px;margin:0}.match-list-team.away img,.match-list-team.away .crest-fallback{order:2}.match-list-team span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.match-list-score{text-align:center;font:900 17px/1 Arial Black,Impact,sans-serif;color:var(--orange)}.match-list-status{text-align:right;color:#7f9aa7;font-size:9px;font-weight:900;text-transform:uppercase}.match-list-status.live{color:var(--green)}.match-list-status.final{color:#d7e0e5}
+@media(max-width:760px){.live-score-rail{grid-template-columns:86px 1fr}.live-score-label{font-size:7px}.live-score-item{min-width:220px}.match-card{grid-template-columns:48px minmax(0,1fr) 64px minmax(0,1fr)!important;padding:9px 8px!important}.match-list-status{grid-column:2/5;text-align:center;font-size:8px}}
+
+:root{--portal-left:188px;--portal-right:272px}
+.portal-shell{display:grid;grid-template-columns:var(--portal-left) minmax(0,1fr) var(--portal-right);min-height:calc(100vh - 68px);background:#061017}
+.portal-left{border-right:1px solid #203d49;background:#081922;padding:22px 12px;position:sticky;top:126px;height:calc(100vh - 126px);overflow:auto;z-index:4}
+.portal-left-title{color:#6f93a4;font-size:9px;font-weight:900;letter-spacing:.14em;padding:5px 12px 11px}.portal-left-title.secondary{margin-top:18px}
+.portal-left a{display:block;color:#e9f2f6;text-decoration:none;padding:10px 12px;border:1px solid transparent;border-radius:7px;font-size:11px;font-weight:800;margin-bottom:4px}
+.portal-left a:hover{background:#0d2732;border-color:#2b4b58}.portal-left a.active{background:linear-gradient(90deg,#40190c,#23120c);border-color:var(--orange);color:#fff}
+.portal-main{min-width:0}
+.portal-right{border-left:1px solid #203d49;background:#071820;padding:12px 10px 24px;position:sticky;top:126px;height:calc(100vh - 126px);overflow:auto;z-index:4}
+.right-panel{border:1px solid #284957;background:#0a1f29;border-radius:8px;overflow:hidden;margin-bottom:12px}
+.right-panel-head{min-height:34px;display:flex;align-items:center;padding:0 12px;color:var(--orange);border-bottom:1px solid #284957;font-size:10px;font-weight:950;text-transform:uppercase}
+.right-match-list{display:grid}.right-match{display:block;text-decoration:none;color:#fff;padding:10px 9px;border-bottom:1px solid #173440}.right-match:last-child{border-bottom:0}.right-match:hover{background:#102a35}
+.right-match-status{color:var(--green);font-size:8px;font-weight:900;text-transform:uppercase;margin-bottom:5px}
+.right-match-row{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:6px;align-items:center}
+.right-team{display:flex;align-items:center;gap:5px;min-width:0;font-size:9px;font-weight:900;text-transform:uppercase}.right-team.away{justify-content:flex-end;text-align:right}
+.right-team img,.right-team .crest-fallback{width:24px;height:24px;object-fit:contain;flex:0 0 24px;margin:0}.right-team.away img,.right-team.away .crest-fallback{order:2}
+.right-team span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.right-score{color:var(--orange);font:900 13px/1 Arial Black,Impact,sans-serif;white-space:nowrap}
+.right-links{display:grid}.right-links a{color:#dbe7ec;text-decoration:none;padding:10px 12px;font-size:10px;font-weight:800;border-bottom:1px solid #173440}.right-links a:last-child{border-bottom:0}.right-links a:hover{background:#102a35;color:#fff}
+.right-empty{color:#6f8c99;padding:18px 12px;font-size:9px;text-align:center}
+.portal-main .hero,.portal-main .section,.portal-main .match-page-hero{padding-left:5vw;padding-right:5vw}
+footer{margin-left:var(--portal-left);margin-right:var(--portal-right)}
+@media(max-width:1180px){:root{--portal-right:230px;--portal-left:166px}}
+@media(max-width:980px){.portal-shell{grid-template-columns:150px minmax(0,1fr)}.portal-right{display:none}footer{margin-right:0;margin-left:150px}}
+@media(max-width:760px){.portal-shell{display:block}.portal-left{display:none}footer{margin:0}}
+
+.aggregate-strip{display:flex;align-items:center;justify-content:center;gap:10px;padding:9px 14px;background:#102631;border-top:1px solid #294b59;font-size:10px;font-weight:900;flex-wrap:wrap}.aggregate-strip b{color:var(--orange);font-size:13px}.aggregate-strip img,.aggregate-strip .crest-fallback{width:20px;height:20px;object-fit:contain;margin:0}
+.match-detail-grid.expanded{grid-template-columns:minmax(0,1.3fr) minmax(310px,.7fr);align-items:start}.detail-stack{display:grid;gap:18px}
+.lineup-title{display:flex;align-items:center;gap:8px}.lineup-title img,.lineup-title .crest-fallback{width:28px;height:28px;object-fit:contain;margin:0}.lineup-team li{display:flex;align-items:center;gap:6px;min-height:21px}.player-event-icons{margin-left:auto;display:inline-flex;gap:3px;font-size:10px}.sub-note{color:#6f95a6;font-size:9px}
+.summary-list{display:grid}.summary-row{display:grid;grid-template-columns:44px 24px 1fr;gap:7px;align-items:center;padding:8px 12px;border-bottom:1px solid #17333f;font-size:10px}.summary-row:last-child{border:0}.summary-row time{font-weight:900}.summary-row small{display:block;color:#7894a1;margin-top:2px}
+.facts-list.vertical{display:block}.facts-list.vertical .fact{display:grid;grid-template-columns:90px 1fr;align-items:center;border-bottom:1px solid #17333f}.facts-list.vertical .fact span{font-size:9px}.facts-list.vertical .fact strong{margin:0;font-size:10px}
+.timeline-row{grid-template-columns:48px 28px minmax(0,1fr)!important}.timeline-row .event-copy small{line-height:1.45}.timeline-row .event-narration{color:#b2c5ce!important;margin-top:5px!important;font-size:10px}.timeline-team{color:var(--orange);font-size:8px;font-weight:900;text-transform:uppercase;margin-bottom:2px}
+@media(max-width:980px){.match-detail-grid.expanded{grid-template-columns:1fr}}
+
+/* RC2B.4.1 — Home Editorial */
+.site-header{height:68px;grid-template-columns:1fr auto 1fr;padding:0 18px 0 16px}
+.header-datetime{display:flex;align-items:center;gap:10px;min-width:230px}.header-datetime>b{color:var(--orange);font:900 28px/1 Arial Black,Impact,sans-serif;letter-spacing:-1px}.header-datetime span{display:grid;gap:2px}.header-datetime strong{color:var(--orange);font-size:9px;text-transform:uppercase}.header-datetime small{color:#a1b6c0;font-size:7px;text-transform:uppercase;white-space:nowrap}
+.site-header>.brand{justify-self:center}.header-actions{justify-self:end;display:flex;align-items:center;gap:24px}.header-actions nav{display:flex;gap:22px}
+.editorial-hero{min-height:300px;padding:46px 7vw 38px;display:block;position:relative;overflow:hidden;background:radial-gradient(circle at 82% 20%,#173746 0,transparent 38%),linear-gradient(145deg,#071018,#0a1e29)}
+.editorial-slider{min-height:205px;position:relative}.editorial-slide{display:none;max-width:760px;animation:editorialFade .35s ease}.editorial-slide.active{display:block}.editorial-slide h1{font-size:clamp(34px,4.3vw,62px);line-height:.95;margin:10px 0 15px;max-width:760px}.editorial-slide .lead{font-size:14px;max-width:720px}.editorial-slide .editorial-meta{color:#7fa0af;font-size:10px;text-transform:uppercase;font-weight:800;margin-bottom:8px}.editorial-slide .editorial-score{color:var(--orange);font:900 20px/1 Arial Black,Impact,sans-serif;margin-top:12px}.editorial-slide a{color:inherit;text-decoration:none}
+.editorial-controls{display:flex;align-items:center;gap:8px;margin-top:8px}.editorial-controls button{width:30px;height:28px;border:1px solid #34515e;background:#081923;color:#fff;border-radius:5px;font-size:18px;cursor:pointer}.editorial-dots{display:flex;gap:5px}.editorial-dots button{width:7px;height:7px;padding:0;border:0;border-radius:50%;background:#45616e}.editorial-dots button.active{background:var(--orange)}
+@keyframes editorialFade{from{opacity:.25;transform:translateX(8px)}to{opacity:1;transform:none}}
+@media(max-width:900px){.site-header{grid-template-columns:auto 1fr auto}.header-actions nav{display:none}.header-datetime{min-width:0}.header-datetime small{display:none}.editorial-hero{padding:36px 28px}.editorial-slider{min-height:190px}}
+@media(max-width:620px){.header-datetime span{display:none}.header-datetime>b{font-size:21px}.site-header>.brand{font-size:21px}.editorial-slide h1{font-size:36px}}
+\n/* RC2B.4.1.1 — relógio ao vivo da partida */\n.match-live-clock{display:flex;align-items:center;justify-content:center;gap:7px;margin:-3px 0 8px;color:#d8e5eb;font-size:10px;font-weight:900;text-transform:uppercase}\n.match-live-clock b{display:inline-block!important;margin:0!important;color:var(--orange)!important;font:900 18px/1 Arial Black,Impact,sans-serif!important;letter-spacing:.02em}\n.match-live-clock .clock-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 7px var(--green)}\n.match-live-clock.paused .clock-dot{background:#79909b;box-shadow:none}.detail-score .kickoff-time{display:block;color:#6f8e9c;font-size:8px;margin-top:3px;text-transform:uppercase}\n
+/* RC2B.4.1.3 — relógio discreto da página de jogo */
+.match-live-clock{display:flex!important;align-items:center!important;justify-content:center!important;gap:5px!important;margin:4px 0 5px!important;color:#9fb6c1!important;font-size:8px!important;font-weight:900!important;text-transform:uppercase!important}
+.match-live-clock b{display:inline-block!important;margin:0!important;color:#f4f7f8!important;font:900 12px/1 Arial,Helvetica,sans-serif!important;letter-spacing:.02em!important}
+.match-live-clock .clock-dot{width:4px!important;height:4px!important;border-radius:50%!important}
+
+
+/* RC2B.4.1.5 — refinamento do card principal */
+.match-scoreboard{
+  width:100%!important;
+  max-width:840px!important;
+  margin:0 auto!important;
+  grid-template-columns:minmax(190px,1fr) minmax(190px,.82fr) minmax(190px,1fr)!important;
+  gap:18px!important;
+  padding:30px 22px 28px!important;
+}
+.detail-team{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  text-align:center!important;
+  min-width:0!important;
+}
+.detail-team img,.detail-team .crest-fallback{
+  width:94px!important;
+  height:94px!important;
+  object-fit:contain!important;
+  margin:0 auto 10px!important;
+}
+.detail-team strong{
+  display:block!important;
+  width:100%!important;
+  max-width:190px!important;
+  margin:0 auto!important;
+  text-align:center!important;
+  font-size:16px!important;
+  line-height:1.08!important;
+}
+.detail-score{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;text-align:center!important}
+.detail-score .match-period{order:1;color:#dce8ed;font-size:10px;font-weight:950;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px}
+.detail-score .status{order:2;margin:0 0 5px!important;padding:5px 10px!important}
+.detail-score .match-live-clock{order:3;margin:0 0 8px!important;gap:5px!important;color:#9fb6c1!important}
+.detail-score .match-live-clock b{font:900 15px/1 Arial,Helvetica,sans-serif!important;color:#f4f7f8!important;letter-spacing:.03em!important}
+.detail-score .match-live-clock .clock-dot{width:5px!important;height:5px!important}
+.detail-score .main-score{order:4;display:block!important;margin:2px 0 7px!important;font:900 clamp(48px,6vw,74px)/1 Arial Black,Impact,sans-serif!important;color:var(--orange)!important}
+.detail-score .kickoff-time{order:5;margin-top:0!important}
+@media(max-width:800px){
+  .match-scoreboard{grid-template-columns:1fr minmax(135px,.8fr) 1fr!important;gap:8px!important;padding:24px 10px!important}
+  .detail-team img,.detail-team .crest-fallback{width:68px!important;height:68px!important}
+  .detail-team strong{font-size:11px!important;max-width:120px!important}
+  .detail-score .main-score{font-size:42px!important}
+}
+
+
+/* RC2B.4.1.6 — placar principal indivisível */
+.match-scoreboard{
+  grid-template-columns:minmax(170px,1fr) minmax(245px,.9fr) minmax(170px,1fr)!important;
+}
+.detail-score{
+  min-width:245px!important;
+}
+.detail-score .main-score{
+  display:block!important;
+  width:max-content!important;
+  min-width:220px!important;
+  max-width:none!important;
+  margin:2px auto 7px!important;
+  white-space:nowrap!important;
+  word-break:keep-all!important;
+  overflow-wrap:normal!important;
+  text-align:center!important;
+}
+@media(max-width:800px){
+  .match-scoreboard{
+    grid-template-columns:minmax(105px,1fr) minmax(170px,.9fr) minmax(105px,1fr)!important;
+  }
+  .detail-score{min-width:170px!important}
+  .detail-score .main-score{min-width:160px!important;white-space:nowrap!important}
+}
+
+</style></head><body>
+<header class="site-header">
+<div class="header-datetime"><b id="clock">--:--</b><span><strong id="weekdayLabel">--</strong><small id="todayLabel">Carregando...</small></span></div>
+<a class="brand brand-link" href="#home">RODRIGOL <b>STUDIO</b></a>
+<div class="header-actions"><nav><a href="#home" data-nav="home">Jogos</a><a href="#standings" data-nav="standings">Classificação</a><a href="#news" data-nav="news">Notícias</a></nav><div class="live-pill"><span></span> AO VIVO</div></div>
+</header><section id="liveScoreRail" class="live-score-rail" hidden><div class="live-score-label"><span></span>JOGOS AO VIVO</div><div class="live-score-window"><div id="liveScoreTrack" class="live-score-track"></div></div></section>
+<div class="portal-shell">
+<aside class="portal-left">
+  <div class="portal-left-title">NAVEGAÇÃO</div>
+  <a href="#home" data-side-nav="home">⌂ Início</a>
+  <a href="#home" data-side-nav="games">◫ Jogos</a>
+  <a href="#standings" data-side-nav="standings">▥ Classificação</a>
+  <a href="#news" data-side-nav="news">▤ Notícias</a>
+  <div class="portal-left-title secondary">EXPLORAR</div>
+  <a href="#competitions" data-side-nav="competitions">🏆 Campeonatos</a>
+  <a href="#clubs" data-side-nav="clubs">⚽ Clubes</a>
+  <a href="#archive" data-side-nav="archive">◷ Arquivo</a>
+</aside>
+<main id="app" class="portal-main">
+<section id="view-home" class="portal-view"><section class="hero editorial-hero">
+<div class="editorial-slider" id="editorialSlider">
+  <article class="editorial-slide active"><p class="eyebrow">DESTAQUES RODRIGOL</p><h1>O futebol do dia,<br/>em tempo real.</h1><p class="lead">Carregando os principais destaques...</p></article>
+</div>
+<div class="editorial-controls"><button id="editorialPrev" type="button" aria-label="Destaque anterior">‹</button><div id="editorialDots" class="editorial-dots"></div><button id="editorialNext" type="button" aria-label="Próximo destaque">›</button></div>
+</section><section class="section"><div class="section-heading"><div><span>AGORA</span><h2>Jogos do dia</h2></div><button id="refresh" type="button">Atualizar</button></div><div id="matchGroups" class="match-groups"><div class="loading">Carregando partidas...</div></div></section><section class="section"><div class="section-heading"><div><span>TABELAS</span><h2>Classificação</h2></div><a class="text-link" href="#standings">Ver todas</a></div><div id="standingsPreview" class="standings-grid"></div></section><section class="section"><div class="section-heading"><div><span>REDAÇÃO</span><h2>Últimas notícias</h2></div><a class="text-link" href="#news">Ver todas</a></div><div id="newsPreview" class="news-grid"></div></section></section>
+<section id="view-match" class="portal-view" hidden><section class="match-page-hero"><a href="#home" class="back-link">← Voltar aos jogos</a><div id="matchPageContent"><div class="loading">Carregando partida...</div></div></section></section>
+<section id="view-standings" class="portal-view" hidden><section class="section section-top"><div class="section-heading"><div><span>TABELAS</span><h2>Classificação</h2></div></div><div id="standingsFull" class="standings-grid"></div></section></section>
+<section id="view-news" class="portal-view" hidden><section class="section section-top"><div class="section-heading"><div><span>REDAÇÃO</span><h2>Notícias</h2></div></div><div id="newsFull" class="news-grid"></div></section></section>
+<section id="view-competitions" class="portal-view" hidden><section class="section section-top"><div class="section-heading"><div><span>COMPETIÇÕES</span><h2>Campeonatos</h2></div></div><div class="empty">A central de campeonatos entra na próxima evolução do Portal.</div></section></section>
+<section id="view-clubs" class="portal-view" hidden><section class="section section-top"><div class="section-heading"><div><span>CLUBES</span><h2>Clubes</h2></div></div><div class="empty">As páginas de clubes entram na próxima evolução do Portal.</div></section></section>
+<section id="view-archive" class="portal-view" hidden><section class="section section-top"><div class="section-heading"><div><span>ARQUIVO</span><h2>Resultados e arquivo</h2></div></div><div class="empty">O arquivo por data entra na próxima evolução do Portal.</div></section></section>
+</main>
+<aside class="portal-right">
+  <section class="right-panel"><div class="right-panel-head">CENTRAL AO VIVO</div><div id="rightLiveMatches" class="right-match-list"></div></section>
+  <section class="right-panel"><div class="right-panel-head">ATALHOS</div><nav class="right-links"><a href="#standings">Classificações</a><a href="#news">Últimas notícias</a><a href="#competitions">Campeonatos</a><a href="#archive">Resultados e arquivo</a></nav></section>
+  <section class="right-panel context-panel"><div id="rightContextTitle" class="right-panel-head">OUTROS JOGOS</div><div id="rightContextMatches" class="right-match-list"></div></section>
+</aside>
+</div>
+<footer><div class="brand small">RODRIGOL <b>STUDIO</b></div><p>Resultados e informações em atualização contínua.</p><strong>@RODRIGOL.STUDIO</strong></footer><script type="module">const $=id=>document.getElementById(id);
+const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
+let editorialIndex=0,editorialTimer=null;
+let lastHomeSignature='',matchTimer;const portalMatchCache=new Map();let portalHomeMatches=[];
+function crest(team){return team?.crest?`<img src="${esc(team.crest)}" alt="${esc(team.name)}">`:`<span class="crest-fallback">${esc(team?.abbreviation||String(team?.name||'?').slice(0,3).toUpperCase())}</span>`}
+function eventIcon(type=''){const key=String(type).toUpperCase();if(key==='GOAL')return'⚽';if(key==='YELLOW_CARD')return'🟨';if(key==='RED_CARD')return'🟥';if(key==='SUBSTITUTION')return'🔁';if(key.includes('HALF'))return'Ⅱ';return'•'}
+function eventLabel(event={}){const type=String(event.type||'').toUpperCase();if(type==='GOAL')return'Gol';if(type==='YELLOW_CARD')return'Cartão amarelo';if(type==='RED_CARD')return'Cartão vermelho';if(type==='SUBSTITUTION')return'Substituição';if(type==='HALFTIME')return'Intervalo';if(type==='MATCH_START'||type==='MATCH_START_UNKNOWN')return'Início de jogo';return String(event.type||'Informação').replaceAll('_',' ')}
+function eventDetail(event={}){
+  if(String(event.type).toUpperCase()==='SUBSTITUTION')return [event.substitutionIn?`Entra ${event.substitutionIn}`:'',event.substitutionOut?`Sai ${event.substitutionOut}`:''].filter(Boolean).join(' · ');
+  return event.player||'';
+}
+function normalizePlayerName(value=''){
+  return String(value||'')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/^\s*\d+\s*[-.:]?\s*/,'')
+    .replace(/[’'"]/g,'')
+    .replace(/\s+/g,' ')
+    .trim().toLowerCase();
+}
+function scorerPlayer(value){
+  if(value&&typeof value==='object')return value.player||value.author||value.name||'';
+  return String(value||'').replace(/^\s*\d{1,3}(?:['’º°])?\s*[-–—·:]?\s*/,'').trim();
+}
+function eventBelongsToSide(match,event,side){
+  const explicit=String(event?.team||event?.eventTeam||event?.side||'').toUpperCase();
+  if(explicit==='HOME'||explicit==='AWAY')return explicit===side;
+  const team=side==='HOME'?match.home:match.away;
+  const eventTeam=normalizePlayerName(event?.teamName||'');
+  if(!eventTeam)return true;
+  return [team?.name,team?.abbreviation,team?.shortName].some(value=>normalizePlayerName(value)===eventTeam);
+}
+function playerEventIcons(match,side,player){
+  const wanted=normalizePlayerName(player),icons=[];
+  let goalEvents=0;
+  for(const event of (match.events||[])){
+    if(normalizePlayerName(event.player||event.author||event.title)!==wanted)continue;
+    if(!eventBelongsToSide(match,event,side))continue;
+    const type=String(event.type||event.eventType||event.action||'').toUpperCase();
+    if(type==='GOAL'||type==='GOL'){icons.push('⚽');goalEvents++}
+    if(type==='YELLOW_CARD'||type.includes('CARTÃO AMARELO')||type.includes('CARTAO AMARELO'))icons.push('🟨');
+    if(type==='RED_CARD'||type.includes('CARTÃO VERMELHO')||type.includes('CARTAO VERMELHO'))icons.push('🟥');
+  }
+  if(goalEvents===0){
+    const scorers=side==='HOME'?(match.scorers?.home||[]):(match.scorers?.away||[]);
+    for(const scorer of scorers){
+      if(normalizePlayerName(scorerPlayer(scorer))===wanted)icons.push('⚽');
+    }
+  }
+  return icons.join('');
+}
+function annotatedPlayer(match,side,player,lineup={}){
+  const sub=(lineup.substitutions||[]).find(item=>normalizePlayerName(item.in)===normalizePlayerName(player));
+  const icons=playerEventIcons(match,side,player);
+  return `<span>${esc(player)}${sub?.out?` <span class="sub-note">🔁 (${esc(sub.out)})</span>`:''}</span>${icons?`<span class="player-event-icons">${icons}</span>`:''}`;
+}
+function aggregateMarkup(match){
+  const ko=match.knockout;
+  if(!ko||ko.legMode!=='TWO_LEGS'||!ko.aggregate)return'';
+  return `<div class="aggregate-strip"><span>PLACAR AGREGADO</span>${crest(ko.tieHome)}<strong>${esc(ko.tieHome?.name||'')}</strong><b>${Number(ko.aggregate.home)||0} × ${Number(ko.aggregate.away)||0}</b><strong>${esc(ko.tieAway?.name||'')}</strong>${crest(ko.tieAway)}${ko.penalties?`<span>· Pênaltis ${Number(ko.penalties.home)||0} × ${Number(ko.penalties.away)||0}</span>`:''}</div>`;
+}
+function lineupMarkup(match,side){
+  const team=side==='HOME'?match.home:match.away,lineup=side==='HOME'?match.lineups?.home:match.lineups?.away,players=lineup?.players||[];
+  return `<div class="lineup-team"><h4 class="lineup-title">${crest(team)}<span>${esc(team?.name)}</span></h4><ul>${players.length?players.map(player=>`<li>${annotatedPlayer(match,side,player,lineup)}</li>`).join(''):'<li>Não informada</li>'}</ul></div>`;
+}
+function matchSummaryMarkup(match){
+  const events=(match.events||[]).filter(event=>['GOAL','YELLOW_CARD','RED_CARD'].includes(String(event.type||'').toUpperCase())).sort((a,b)=>(Number(a.minute)||0)-(Number(b.minute)||0));
+  return events.length?events.map(event=>`<div class="summary-row"><time>${event.minute?`${event.minute}'`:''}</time><span>${eventIcon(event.type)}</span><div><strong>${esc(event.player||eventLabel(event))}</strong><small>${esc(event.team==='HOME'?match.home?.name:event.team==='AWAY'?match.away?.name:'')}</small></div></div>`).join(''):'<div class="empty">Sem gols ou cartões registrados.</div>';
+}
+function matchPortalKey(match={}){
+  const direct=String(match.id||'').trim();
+  if(direct)return direct;
+  return ['fallback',match.date||'',match.time||'',match.competition||'',match.home?.name||'',match.away?.name||''].join('|');
+}
+function rememberMatch(match={}){
+  const key=matchPortalKey(match);
+  portalMatchCache.set(key,match);
+  try{sessionStorage.setItem(`rodrigol:portal-match:${key}`,JSON.stringify(match));}catch{}
+  return key;
+}
+function rememberedMatch(key=''){
+  if(portalMatchCache.has(key))return portalMatchCache.get(key);
+  try{
+    const raw=sessionStorage.getItem(`rodrigol:portal-match:${key}`);
+    if(raw){const match=JSON.parse(raw);portalMatchCache.set(key,match);return match;}
+  }catch{}
+  return null;
+}
+function sortMatchesChronologically(matches=[]){return [...matches].sort((a,b)=>String(a.time||"99:99").localeCompare(String(b.time||"99:99"))||String(a.competition||"").localeCompare(String(b.competition||"")))}
+function publicMatchStatus(match={}){if(match.live)return String(match.status||match.phase||"AO VIVO");if(String(match.status||"").toUpperCase()==="FINAL")return"FINAL";return match.time||match.status||"PROGRAMADO"}
+function matchCard(match){const key=rememberMatch(match),scheduled=match.status==='PROGRAMADO',score=scheduled?'×':`${Number(match.score?.home)||0} × ${Number(match.score?.away)||0}`,status=publicMatchStatus(match),statusClass=match.live?'live':(String(match.status||'').toUpperCase()==='FINAL'?'final':'');return `<article class="match-card" data-match-key="${esc(key)}"><div class="match-time">${esc(match.time||'—')}</div><div class="match-list-team">${crest(match.home)}<span>${esc(match.home?.name)}</span></div><div class="match-list-score">${esc(score)}</div><div class="match-list-team away"><span>${esc(match.away?.name)}</span>${crest(match.away)}</div><div class="match-list-status ${statusClass}">${esc(status)}</div></article>`}
+function renderMatches(matches=[]){const box=$('matchGroups');if(!matches.length){box.innerHTML='<div class="empty">Nenhuma partida cadastrada para hoje.</div>';renderLiveScoreRail([]);return}const ordered=sortMatchesChronologically(matches),groups=new Map();for(const match of ordered){const key=match.competition||'Futebol';if(!groups.has(key))groups.set(key,[]);groups.get(key).push(match)}box.innerHTML=[...groups].map(([competition,items])=>`<section class="competition-block"><div class="competition-title">${esc(competition)}</div><div class="matches">${items.map(matchCard).join('')}</div></section>`).join('');box.querySelectorAll('[data-match-key]').forEach(card=>card.addEventListener('click',()=>location.hash=`match=${encodeURIComponent(card.dataset.matchKey)}`));portalHomeMatches=ordered;renderLiveScoreRail(ordered.filter(match=>match.live));renderRightSidebar(ordered,null)}
+function liveScoreItem(match){const key=rememberMatch(match);return `<a class="live-score-item" href="#match=${encodeURIComponent(key)}"><div class="live-mini-team">${crest(match.home)}<span>${esc(match.home?.name)}</span></div><div class="live-mini-score"><b>${Number(match.score?.home)||0} × ${Number(match.score?.away)||0}</b><small>${esc(match.clock?.period||match.status||'AO VIVO')}</small></div><div class="live-mini-team away"><span>${esc(match.away?.name)}</span>${crest(match.away)}</div></a>`}
+function renderLiveScoreRail(matches=[]){const rail=$('liveScoreRail'),track=$('liveScoreTrack');if(!rail||!track)return;const live=sortMatchesChronologically(matches);if(!live.length){rail.hidden=true;track.innerHTML='';track.classList.remove('is-scrolling');return}rail.hidden=false;track.classList.remove('is-scrolling');track.innerHTML=`<div class="live-score-copy">${live.map(liveScoreItem).join('')}</div>`;requestAnimationFrame(()=>requestAnimationFrame(()=>{const copy=track.querySelector('.live-score-copy'),win=track.parentElement;if(!copy||!win)return;const width=Math.ceil(copy.getBoundingClientRect().width),visible=Math.floor(win.clientWidth);if(width<=visible)return;track.appendChild(copy.cloneNode(true));track.style.setProperty('--live-distance',`${width}px`);track.style.setProperty('--live-duration',`${Math.max(28,(width+visible)/34)}s`);track.classList.add('is-scrolling')}))}
+function rightMatchCard(match){
+  const key=rememberMatch(match),scheduled=match.status==='PROGRAMADO';
+  const score=scheduled?'×':`${Number(match.score?.home)||0} × ${Number(match.score?.away)||0}`;
+  return `<a class="right-match" href="#match=${encodeURIComponent(key)}"><div class="right-match-status">${esc(publicMatchStatus(match))}</div><div class="right-match-row"><div class="right-team">${crest(match.home)}<span>${esc(match.home?.name)}</span></div><div class="right-score">${esc(score)}</div><div class="right-team away"><span>${esc(match.away?.name)}</span>${crest(match.away)}</div></div></a>`;
+}
+function renderRightSidebar(matches=[],currentMatch=null){
+  const liveBox=$('rightLiveMatches'),contextBox=$('rightContextMatches'),title=$('rightContextTitle');
+  if(!liveBox||!contextBox||!title)return;
+  const live=sortMatchesChronologically(matches.filter(match=>match.live));
+  liveBox.innerHTML=live.length?live.slice(0,8).map(rightMatchCard).join(''):'<div class="right-empty">Nenhum jogo ao vivo neste momento.</div>';
+  let context=[];
+  if(currentMatch){
+    context=sortMatchesChronologically(matches.filter(match=>match.id!==currentMatch.id&&((currentMatch.competitionId&&match.competitionId===currentMatch.competitionId)||(!currentMatch.competitionId&&match.competition===currentMatch.competition)))).slice(0,6);
+    title.textContent=currentMatch.competition?'OUTROS JOGOS · '+currentMatch.competition:'OUTROS JOGOS';
+  }else{
+    context=sortMatchesChronologically(matches.filter(match=>!match.live)).slice(0,6);
+    title.textContent='PRÓXIMOS JOGOS';
+  }
+  contextBox.innerHTML=context.length?context.map(rightMatchCard).join(''):'<div class="right-empty">Nenhum jogo disponível.</div>';
+}
+function updatePublicSideNav(routeName){
+  document.querySelectorAll('[data-side-nav]').forEach(link=>{
+    const key=link.dataset.sideNav;
+    const active=(routeName==='home'&&(key==='home'||key==='games'))||routeName===key;
+    link.classList.toggle('active',active);
+  });
+}
+function standingCard(table,full=false){return `<article class="standing-card ${full?'full':''}"><div class="standing-head"><b>${esc(table.competition||table.name)}</b><small>${esc(table.name)}</small></div>${table.rows.slice(0,full?20:10).map(row=>`<div class="standing-row"><span class="pos">${row.position}</span><strong>${esc(row.clubName)}</strong><span class="pj">${row.played}J</span>${full?`<span class="sg">${row.goalDifference>=0?'+':''}${row.goalDifference}</span>`:''}<span class="pts">${row.points}</span></div>`).join('')}</article>`}
+function renderStandings(tables=[]){const preview=$('standingsPreview'),full=$('standingsFull');if(!tables.length){const empty='<div class="empty">As classificações publicadas no Studio aparecerão aqui.</div>';preview.innerHTML=empty;full.innerHTML=empty;return}preview.innerHTML=tables.slice(0,2).map(t=>standingCard(t,false)).join('');full.innerHTML=tables.map(t=>standingCard(t,true)).join('')}
+function newsCard(item){return `<article class="news-card"><span>${esc(item.category||'RodriGol')}</span><h3>${esc(item.title)}</h3><p>${esc(item.summary||'')}</p></article>`}
+function renderNews(news=[]){const preview=$('newsPreview'),full=$('newsFull');if(!news.length){const empty='<div class="empty">As notícias publicadas no Studio aparecerão aqui.</div>';preview.innerHTML=empty;full.innerHTML=empty;return}preview.innerHTML=news.slice(0,6).map(newsCard).join('');full.innerHTML=news.map(newsCard).join('')}
+function editorialItems(data={}){
+  const managed=(Array.isArray(data.highlights)?data.highlights:[]).filter(item=>item&&String(item.title||'').trim()).slice(0,8).map(item=>({kind:item.type||'managed',eyebrow:item.eyebrow||'DESTAQUE RODRIGOL',title:item.title,lead:item.lead||'',href:item.href||'#home',meta:item.meta||''}));
+  if(managed.length)return managed;
+  const news=(Array.isArray(data.news)?data.news:[]).filter(item=>item&&String(item.title||item.headline||'').trim());
+  const selected=news.filter(item=>item.featured===true||item.highlight===true||item.priority==='MAX'||item.priority==='HIGH');
+  const editorial=(selected.length?selected:news).slice(0,5).map(item=>({kind:'news',eyebrow:item.category||item.competition||'DESTAQUE RODRIGOL',title:item.title||item.headline,lead:item.summary||item.lead||item.description||'',href:item.url||'#news',meta:item.publishedAt||item.time||''}));
+  if(editorial.length)return editorial;
+  const matches=(Array.isArray(data.matches)?data.matches:[]).filter(Boolean);
+  const ranked=[...matches].sort((a,b)=>Number(Boolean(b.live))-Number(Boolean(a.live))||String(a.time||'99:99').localeCompare(String(b.time||'99:99')));
+  return ranked.slice(0,5).map(match=>{const scheduled=String(match.status||'').toUpperCase()==='PROGRAMADO';return {kind:'match',eyebrow:match.live?'AO VIVO':match.competition||'JOGO DO DIA',title:`${match.home?.name||'Mandante'} × ${match.away?.name||'Visitante'}`,lead:scheduled?`${match.time||''}${match.round?` · ${match.round}`:''}`:`${match.status||''}${match.round?` · ${match.round}`:''}`,score:scheduled?'':`${Number(match.score?.home)||0} × ${Number(match.score?.away)||0}`,href:`#match=${encodeURIComponent(rememberMatch(match))}`,meta:match.competition||''};});
+}
+function renderEditorial(data={}){
+  const items=editorialItems(data),slider=$('editorialSlider'),dots=$('editorialDots');
+  if(!slider||!dots)return;
+  const safeItems=items.length?items:[{eyebrow:'RODRIGOL STUDIO',title:'Jogos, resultados e informação em tempo real.',lead:'Acompanhe a programação do dia no RodriGol.',href:'#home'}];
+  editorialIndex=Math.min(editorialIndex,safeItems.length-1);
+  slider.innerHTML=safeItems.map((item,index)=>`<article class="editorial-slide ${index===editorialIndex?'active':''}"><a href="${esc(item.href||'#home')}"><p class="eyebrow">${esc(item.eyebrow||'DESTAQUE RODRIGOL')}</p>${item.meta?`<div class="editorial-meta">${esc(item.meta)}</div>`:''}<h1>${esc(item.title||'RodriGol Studio')}</h1>${item.lead?`<p class="lead">${esc(item.lead)}</p>`:''}${item.score?`<div class="editorial-score">${esc(item.score)}</div>`:''}</a></article>`).join('');
+  dots.innerHTML=safeItems.map((_,index)=>`<button type="button" data-editorial="${index}" class="${index===editorialIndex?'active':''}" aria-label="Ir ao destaque ${index+1}"></button>`).join('');
+  dots.querySelectorAll('[data-editorial]').forEach(button=>button.addEventListener('click',()=>showEditorial(Number(button.dataset.editorial))));
+  slider.dataset.count=String(safeItems.length);
+  restartEditorialTimer();
+}
+function showEditorial(index){
+  const slider=$('editorialSlider'),dots=$('editorialDots');if(!slider)return;
+  const slides=[...slider.querySelectorAll('.editorial-slide')];if(!slides.length)return;
+  editorialIndex=(index+slides.length)%slides.length;
+  slides.forEach((slide,i)=>slide.classList.toggle('active',i===editorialIndex));
+  dots?.querySelectorAll('button').forEach((dot,i)=>dot.classList.toggle('active',i===editorialIndex));
+}
+function restartEditorialTimer(){
+  clearInterval(editorialTimer);
+  const count=Number($('editorialSlider')?.dataset.count)||0;
+  if(count>1)editorialTimer=setInterval(()=>showEditorial(editorialIndex+1),7000);
+}
+async function loadHome(force=false){try{const response=await fetch(`/api/public/home?date=${today()}`,{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);const data=await response.json(),receivedAt=Date.now();if(Array.isArray(data.matches))data.matches.forEach(match=>stampPortalClock(match,receivedAt));const signature=JSON.stringify([data.revision,data.matches,data.standings,data.news,data.highlights]);if(force||signature!==lastHomeSignature){lastHomeSignature=signature;renderEditorial(data);renderMatches(data.matches);renderStandings(data.standings);renderNews(data.news)}}catch(error){$('matchGroups').innerHTML='<div class="empty">Portal aguardando conexão com o RodriGol Studio.</div>';console.error(error)}}
+function detailTeam(team){return `<div class="detail-team">${crest(team)}<strong>${esc(team?.name)}</strong></div>`}
+function clockStartMillis(value){
+  if(value===null||value===undefined||value==='')return null;
+  const numeric=Number(value);
+  if(Number.isFinite(numeric)&&numeric>0)return numeric;
+  const parsed=Date.parse(String(value));
+  return Number.isFinite(parsed)?parsed:null;
+}
+function stampPortalClock(match,now=Date.now()){
+  if(match?.clock&&typeof match.clock==='object')match.clock.syncedAt=now;
+  return match;
+}
+function effectivePortalClock(match,now=Date.now()){
+  const clock=match?.clock||{},base=Math.max(0,Number(clock.elapsedSeconds)||0);
+  if(!clock.running)return base;
+  const synced=Number(clock.syncedAt)||now;
+  return base+Math.max(0,Math.floor((now-synced)/1000));
+}
+function formatPortalClock(seconds=0){
+  const safe=Math.max(0,Math.floor(Number(seconds)||0));
+  return `${String(Math.floor(safe/60)).padStart(2,'0')}:${String(safe%60).padStart(2,'0')}`;
+}
+function shouldShowPortalClock(match){
+  if(match?.clock?.visible===false)return false;
+  const status=String(match?.status||match?.phase||'').toUpperCase();
+  if(['PROGRAMADO','SCHEDULED','PRE_GAME','FINAL','FINISHED'].includes(status))return false;
+  return Boolean(match?.clock?.running)||Number(match?.clock?.elapsedSeconds)>0||Boolean(match?.clock?.startedAt);
+}
+function matchClockMarkup(match){
+  if(!shouldShowPortalClock(match))return '';
+  const running=Boolean(match?.clock?.running);
+  return `<div class="match-live-clock ${running?'':'paused'}"><span class="clock-dot"></span><b data-match-clock>${formatPortalClock(effectivePortalClock(match))}</b></div>`;
+}
+function matchPeriodMarkup(match){
+  const period=String(match?.clock?.period||'').trim();
+  if(!period||['PROGRAMADO','FINAL'].includes(period.toUpperCase()))return '';
+  return `<div class="match-period">${esc(period)}</div>`;
+}
+function refreshVisibleMatchClock(){
+  const node=document.querySelector('[data-match-clock]');
+  if(!node)return;
+  const hash=location.hash.slice(1);
+  if(!hash.startsWith('match='))return;
+  const key=decodeURIComponent(hash.slice(6)),match=rememberedMatch(key);
+  if(match&&shouldShowPortalClock(match))node.textContent=formatPortalClock(effectivePortalClock(match));
+}
+function matchPage(match){
+  const timeline=Array.isArray(match.events)?match.events:[];
+  return `<div class="match-detail"><div class="match-detail-top"><div class="match-competition">${esc(match.competition||'Futebol')} ${match.round?`· ${esc(match.round)}`:''}</div><div class="match-scoreboard">${detailTeam(match.home)}<div class="detail-score">${matchPeriodMarkup(match)}<span class="status">${esc(match.status||'')}</span>${matchClockMarkup(match)}<b class="main-score">${Number(match.score?.home)||0} × ${Number(match.score?.away)||0}</b><small class="kickoff-time">${match.time?`Início ${esc(match.time)}`:esc(match.facts?.venue||'')}</small></div>${detailTeam(match.away)}</div>${aggregateMarkup(match)}</div>
+  <div class="match-detail-grid expanded"><section class="detail-panel"><h3>Lances da partida</h3><div class="timeline">${timeline.length?timeline.map(event=>`<div class="timeline-row"><time>${event.minute?`${event.minute}'`:''}</time><span class="event-icon">${eventIcon(event.type)}</span><div class="event-copy"><div class="timeline-team">${esc(event.team==='HOME'?match.home?.name:event.team==='AWAY'?match.away?.name:'')}</div><strong>${esc(eventLabel(event))}</strong><small>${esc(eventDetail(event))}</small>${event.details?`<small class="event-narration">${esc(event.details)}</small>`:''}</div></div>`).join(''):'<div class="empty">Nenhum lance registrado ainda.</div>'}</div></section>
+  <aside class="detail-stack"><section class="detail-panel"><h3>Escalações</h3><div class="lineup-columns">${lineupMarkup(match,'HOME')}${lineupMarkup(match,'AWAY')}</div></section><section class="detail-panel"><h3>Sumário da partida</h3><div class="summary-list">${matchSummaryMarkup(match)}</div></section><section class="detail-panel"><h3>Informações</h3><div class="facts-list vertical"><div class="fact"><span>Estádio</span><strong>${esc(match.facts?.venue||match.venue||'—')}</strong></div><div class="fact"><span>Árbitro</span><strong>${esc(match.facts?.referee||'—')}</strong></div><div class="fact"><span>Público</span><strong>${esc(match.facts?.attendance||'—')}</strong></div><div class="fact"><span>Clima</span><strong>${esc(match.facts?.weather||'—')}</strong></div>${match.round?`<div class="fact"><span>Fase/Rodada</span><strong>${esc(match.round)}</strong></div>`:''}${match.date?`<div class="fact"><span>Data</span><strong>${esc(match.date)}</strong></div>`:''}</div></section></aside></div></div>`;
+}
+async function loadMatch(key){const cached=rememberedMatch(key);if(cached){if(cached.clock&&!cached.clock.syncedAt)stampPortalClock(cached,Date.now());$('matchPageContent').innerHTML=matchPage(cached);renderRightSidebar(portalHomeMatches,cached);}else $('matchPageContent').innerHTML='<div class="loading">Carregando partida...</div>';const realId=String(cached?.id||key||'').trim();if(!realId||realId.startsWith('fallback|'))return;try{const response=await fetch(`/api/public/matches/${encodeURIComponent(realId)}`,{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);const data=await response.json();if(data?.match){stampPortalClock(data.match,Date.now());const combined=mergePortalMatch(cached||{},data.match);portalMatchCache.set(key,combined);try{sessionStorage.setItem(`rodrigol:portal-match:${key}`,JSON.stringify(combined));}catch{}$('matchPageContent').innerHTML=matchPage(combined);renderRightSidebar(portalHomeMatches,combined)}}catch(error){if(!cached)$('matchPageContent').innerHTML='<div class="empty">Partida não encontrada ou indisponível.</div>';console.warn('Detalhe da API indisponível; usando dados da Home.',error)}}
+function setView(name){document.querySelectorAll('.portal-view').forEach(view=>view.hidden=true);$(`view-${name}`).hidden=false;document.querySelectorAll('[data-nav]').forEach(link=>link.classList.toggle('active',link.dataset.nav===name))}
+function route(){
+  clearInterval(matchTimer);
+  const hash=location.hash.slice(1)||'home';
+  if(hash.startsWith('match=')){setView('match');updatePublicSideNav('games');const id=decodeURIComponent(hash.slice(6));loadMatch(id);matchTimer=setInterval(()=>loadMatch(id),3000);return}
+  if(hash==='standings'){setView('standings');updatePublicSideNav('standings');renderRightSidebar(portalHomeMatches,null);loadHome(true);return}
+  if(hash==='news'){setView('news');updatePublicSideNav('news');renderRightSidebar(portalHomeMatches,null);loadHome(true);return}
+  if(hash==='competitions'){setView('competitions');updatePublicSideNav('competitions');renderRightSidebar(portalHomeMatches,null);return}
+  if(hash==='clubs'){setView('clubs');updatePublicSideNav('clubs');renderRightSidebar(portalHomeMatches,null);return}
+  if(hash==='archive'){setView('archive');updatePublicSideNav('archive');renderRightSidebar(portalHomeMatches,null);return}
+  setView('home');updatePublicSideNav('home');renderRightSidebar(portalHomeMatches,null);loadHome(true);
+}
+function tick(){const now=new Date();$('clock').textContent=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});const weekday=now.toLocaleDateString('pt-BR',{weekday:'long'}).replace('-feira','-FEIRA').toUpperCase();$('weekdayLabel').textContent=weekday;$('todayLabel').textContent=now.toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}).toUpperCase()}
+$('refresh').addEventListener('click',()=>loadHome(true));
+$('editorialPrev')?.addEventListener('click',()=>{showEditorial(editorialIndex-1);restartEditorialTimer()});
+$('editorialNext')?.addEventListener('click',()=>{showEditorial(editorialIndex+1);restartEditorialTimer()});window.addEventListener('hashchange',route);tick();setInterval(tick,1000);setInterval(refreshVisibleMatchClock,1000);setInterval(()=>{if(!document.hidden&&!location.hash.startsWith('#match='))loadHome()},5000);route();</script></body></html>

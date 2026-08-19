@@ -1,22 +1,51 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>RodriGol — Multicabine Operacional</title>
-  <link rel="stylesheet" href="/control/multicabine.css">
-</head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RodriGol — Multicabine Operacional</title>
+<link href="/control/global-nav.css" rel="stylesheet">
+<link href="/control/design-system.css" rel="stylesheet">
+<link href="/control/multicabine.css" rel="stylesheet">
+<link rel="stylesheet" href="/control/admin-consolidation.css"></head>
 <body>
 <header class="topbar">
-  <div class="brand">RODRIGOL <b>TV</b><small>SISTEMA OPERACIONAL DE REDAÇÃO ESPORTIVA</small></div>
-  <div class="newsflash"><span>AGORA NA REDAÇÃO</span><strong>Operação simultânea das coberturas</strong></div>
-  <nav><a href="/control/central.html">Central</a><a href="/control/">Cabine ativa</a><a href="/control/editorial.html">Mesa Editorial</a><a href="/control/news.html">Notícias</a><a href="/control/history.html">◷ Histórico</a></nav>
+  <div class="brand">RODRIGOL <b>STUDIO</b></div>
+  <div class="newsflash"><span>OPERAÇÃO SIMULTÂNEA</span><strong>Controle centralizado das partidas em cobertura</strong></div>
   <div class="status"><time id="now">--:--:--</time><b id="bridgeStatus">Bridge conectando…</b></div>
 </header>
-<main>
-  <section class="hero"><div><span>SPRINT 5.4</span><h1>CONTROLE MULTICABINE · MULTICABINE OPERACIONAL</h1><p>Controle relógios, placares e eventos de várias partidas sem trocar de página.</p></div><button id="refresh">↻ Atualizar</button></section>
-  <section id="matchList" class="match-list"></section>
-</main>
-<script type="module" src="/control/multicabine.js"></script>
-</body>
-</html>
+<div class="rg-page-shell multicabine-shell">
+  <aside class="sidebar"></aside>
+  <main class="workspace">
+    <section class="panel mc-hero">
+      <div><span class="eyebrow">CENTRAL OPERACIONAL</span><h1>CONTROLE MULTICABINE</h1><p>Controle relógios, placares e eventos de várias partidas sem trocar de página.</p></div>
+      <button class="btn primary" id="refresh">↻ Atualizar partidas</button>
+    </section>
+    <section class="panel mc-toolbar">
+      <div class="mc-toolbar-title"><b>FILTROS DA OPERAÇÃO</b><small>Refine a grade sem alterar os dados das partidas.</small></div>
+      <div class="mc-filters">
+        <label>Escopo<select id="scopeFilter"><option value="OPERATIONAL">Em operação</option><option value="TODAY">Todos de hoje</option><option value="ALL">Todos os jogos</option></select></label>
+        <label>Competição<select id="competitionFilter"><option value="ALL">Todas as competições</option></select></label>
+        <label>Rodada<select id="roundFilter"><option value="ALL">Todas as rodadas</option></select></label>
+        <label>Estado<select id="phaseFilter"><option value="ALL">Todos os estados</option><option value="PRE_GAME">Em preparação</option><option value="FIRST_HALF">1º tempo</option><option value="HALFTIME">Intervalo</option><option value="SECOND_HALF">2º tempo</option><option value="LIVE_UNKNOWN">Ao vivo sem relógio</option><option value="FINAL">Final</option></select></label>
+        <a class="btn" href="/control/agenda.html">Abrir Agenda</a>
+      </div>
+    </section>
+    <section class="mc-ops-grid" aria-label="Resumo operacional">
+      <article class="panel mc-stat"><span>AO VIVO</span><b id="mcLive">0</b></article>
+      <article class="panel mc-stat"><span>INTERVALO</span><b id="mcHalftime">0</b></article>
+      <article class="panel mc-stat"><span>NO AR</span><b id="mcOnAir">0</b></article>
+      <article class="panel mc-stat alert"><span>MISSÕES</span><b id="mcMissions">0</b></article>
+    </section>
+    <section class="panel mc-mission-strip" id="mcMissionStrip">
+      <div><span>PRIORIDADE OPERACIONAL</span><strong id="mcMissionTitle">Operação organizada</strong><small id="mcMissionDetail">Nenhuma ação urgente no momento.</small></div>
+      <a class="btn" id="mcMissionAction" href="/control/missions.html">Abrir missões</a>
+    </section>
+    <section class="match-list" id="matchList"></section>
+  </main>
+</div>
+<script src="/control/multicabine.js" type="module"></script>
+<script src="/control/multicabine-ops.js" type="module"></script>
+<script type="module">import{getCompetitions,getRounds}from'/control/data-store.js';const c=document.getElementById('competitionFilter'),r=document.getElementById('roundFilter');c.innerHTML+=[...getCompetitions()].map(x=>`<option value="${x.id}">${x.shortName||x.name}</option>`).join('');r.innerHTML+=[...getRounds()].map(x=>`<option value="${x.id}">${x.name}</option>`).join('');[document.getElementById('scopeFilter'),c,r,document.getElementById('phaseFilter')].forEach(x=>x.addEventListener('change',()=>window.dispatchEvent(new CustomEvent('rodrigol:data-changed'))));</script>
+<script defer src="/control/global-nav.js"></script>
+</body></html>

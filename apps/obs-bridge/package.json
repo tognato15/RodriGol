@@ -1,14 +1,14 @@
 {
   "name": "@rodrigol/obs-bridge",
-  "version": "0.6.4",
+  "version": "2.2.2-rc.golive.1",
   "private": true,
-  "description": "Ponte em tempo real entre o RodriGol e o Browser Overlay/OBS.",
+  "description": "RodriGol Go-Live 1 — servidor preparado para volume persistente e nuvem.",
   "type": "module",
   "scripts": {
     "dev": "node server.mjs",
     "start": "node server.mjs",
     "build": "node -e \"console.log('OBS Bridge não exige compilação.')\"",
-    "check": "node --check server.mjs && node --check public/data-store.js && node --check public/central.js && node --check public/multicabine.js && node --check public/control.js && node --check public/editorial.js && node --check public/matches.js && node --check public/clubs.js && node --check public/history.js && node --check public/ticker.js && node --check public/production.js",
+    "check": "node scripts/check-public.mjs",
     "test": "node --test"
   }
 }

@@ -1,0 +1,18 @@
+{
+  "product": "RodriGol Studio",
+  "release": "RC2A",
+  "projectVersion": "2.2.2-rc.2a",
+  "bridgeVersion": "2.2.2-rc.2a",
+  "base": "RC1",
+  "features": [
+    "remote admin session authentication",
+    "API bearer authentication",
+    "remote server safe-start gate",
+    "server persistence",
+    "cross-device data sync",
+    "club crest sync",
+    "competition logo sync",
+    "remote runtime auto-detection"
+  ],
+  "next": "RC2B Portal Público MVP"
+}

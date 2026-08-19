@@ -1,10 +1,18 @@
 node_modules/
-dist/
-coverage/
 *.log
-.env
-.env.*
-!.env.example
 .DS_Store
 Thumbs.db
-.vscode/
+apps/overlay-studio/dist/
+packages/*/dist/
+coverage/
+.cache/
+.vite/
+
+# RodriGol Go-Live - arquivos locais e gerados
+novo_pacote.zip
+portal-inline.mjs
+apps/overlay/dist/
+apps/obs-bridge/data/
+.env
+.env.production
+.env.local

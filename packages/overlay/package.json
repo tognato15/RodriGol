@@ -1,13 +1,20 @@
 {
   "name": "@rodrigol/overlay",
-  "version": "0.1.0",
+  "version": "2.0.0-alpha.1",
   "private": true,
   "description": "Motor de overlays do RodriGol 2.0 para cenas, regiões, componentes e comandos de exibição.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
-  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "check": "tsc -p tsconfig.json --noEmit",
@@ -15,7 +22,7 @@
     "clean": "node -e \"const fs=require('node:fs'); fs.rmSync('dist',{recursive:true,force:true});\""
   },
   "dependencies": {
-    "@rodrigol/core": "0.2.0",
-    "@rodrigol/editorial": "0.1.0"
+    "@rodrigol/core": "1.7.0",
+    "@rodrigol/editorial": "1.7.0"
   }
 }

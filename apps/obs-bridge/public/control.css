@@ -27,3 +27,19 @@ html,body{min-width:0;overflow-x:hidden}.app-shell{grid-template-columns:190px m
 #saveLineups{background:#123044;border:1px solid #2b627e;border-radius:5px;padding:8px 12px;font-weight:900;color:#fff;cursor:pointer}
 #saveLineups:hover{border-color:#f05a00;background:#17384b}
 #saveLineups:disabled{opacity:.7;cursor:wait}
+
+
+/* Beta 1.7.7 — Centro Operacional da Cabine */
+.operational-card{display:block}.other-recent{display:block;margin-top:6px;padding:5px 7px;border-left:2px solid var(--orange);background:#07141d;color:#dce8ef;font-size:9px;font-weight:800}.other-actions{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:8px}.other-actions button{padding:7px 5px!important;text-align:center!important;background:#102b3b!important;border:1px solid #28526a!important;border-radius:4px!important;font-size:8px!important;font-weight:950!important;cursor:pointer}.other-actions button:last-child{border-color:#9a3d08!important;color:#ff9a5a!important}.other-actions button:disabled{opacity:.55!important;cursor:default}.operational-footer{display:grid;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid #1c394a}.operational-footer button,.operational-footer a{display:block;padding:8px;border:1px solid #28495c;border-radius:5px;background:#0d2230;color:#dce8ef!important;text-align:center;text-decoration:none;font-size:9px;font-weight:900}.finished-today{display:grid;gap:7px;margin-top:8px}.finished-today .other-actions{display:none}.finished-today .other-match{opacity:.82}.finished-today .other-status{color:#8fa6b4}
+
+.other-context{display:block;color:#89a1af;font-size:8px;font-weight:800;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.operational-card.needs-attention{border-color:#f1a217!important;box-shadow:0 0 0 1px rgba(241,162,23,.25)}.operational-card.needs-attention .other-status{color:#ffc258}
+
+
+/* Entrega 6.6 — dados oficiais da partida */
+.match-facts{padding:14px}.match-facts .section-title small{display:block;color:var(--muted);font-size:10px;margin-top:3px}.match-facts-grid{display:grid;grid-template-columns:1.2fr .8fr 1fr;gap:10px;margin-top:12px}.match-facts-grid label{font-size:10px;color:#c0ccd5}.match-facts-grid input{width:100%;margin-top:5px;padding:10px;background:#07131d;border:1px solid #244052;border-radius:5px}.match-facts input:focus{outline:none;border-color:#f05a00;box-shadow:0 0 0 2px rgba(240,90,0,.12)}#saveMatchFacts{background:#123044;border:1px solid #2b627e;border-radius:5px;padding:8px 12px;font-weight:900;color:#fff;cursor:pointer}#saveMatchFacts:hover{border-color:#f05a00;background:#17384b}#saveMatchFacts:disabled{opacity:.7;cursor:wait}#matchFactsStatus{margin:9px 0 0;font-weight:800}@media(max-width:900px){.match-facts-grid{grid-template-columns:1fr}}
+.weather-action{width:100%;margin-top:6px;padding:7px 9px;border:1px solid #2b627e;border-radius:5px;background:#102b3b;color:#dff5ff;font-size:10px;font-weight:900;cursor:pointer}.weather-action:hover{border-color:#f05a00}.weather-action:disabled{opacity:.65;cursor:wait}.weather-status{display:block;min-height:14px;margin-top:5px;color:#86d9f5;font-size:9px;line-height:1.35}
+
+.substitution-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;grid-column:span 2}
+.substitution-fields[hidden]{display:none!important}
+.substitution-fields select{width:100%}
+@media(max-width:850px){.substitution-fields{grid-template-columns:1fr;grid-column:1/-1}}

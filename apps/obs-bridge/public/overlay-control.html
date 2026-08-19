@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>RodriGol — Central do Overlay</title>
+<link href="/control/central.css" rel="stylesheet"/>
+<link href="/control/overlay-control.css" rel="stylesheet"/>
+<link href="/control/admin-consolidation.css" rel="stylesheet"/><link href="/control/global-nav.css" rel="stylesheet"/><link href="/control/design-system.css" rel="stylesheet"/></head>
+<body>
+<header class="topbar">
+<div class="brand">RODRIGOL <b>STUDIO</b></div>
+<div class="newsflash"><span>OVERLAY</span><strong>Design System e operação integrada</strong></div>
+<div class="top-time"><b id="now">--:--:--</b><small id="today">--</small></div>
+</header>
+<div class="shell overlay-shell">
+<aside class="sidebar">
+<a class="active" href="/control/overlay-control.html">▰ Central do Overlay</a>
+<a href="/control/production.html">▦ Central de Produção</a>
+<a href="/control/central.html">▣ Central de Coberturas</a>
+<a href="/control/">◉ Cabine de Cobertura</a>
+<a href="/control/multicabine.html">▦ Multicabine</a>
+<a href="/control/ticker.html">▰ Central de Destaques</a>
+<h4>CONTEÚDO</h4>
+<a href="/control/editorial.html">☷ Mesa Editorial</a>
+<a href="/control/news.html">▤ Notícias</a>
+<a href="/control/history.html">◷ Histórico</a>
+<h4>SAÍDA</h4>
+<a href="/" target="_blank">□ Abrir Overlay clássico</a>
+<a href="/control/competitions.html">🏆 Editor de Competições</a></aside>
+<main class="workspace">
+<section class="hero panel overlay-hero">
+<div>
+<span class="eyebrow">RODRIGOL STUDIO</span>
+<h1>CENTRAL DO OVERLAY</h1>
+<p>Crie múltiplos scoreboards, selecione até seis eventos e troque o painel no ar sem recarregar o OBS.</p>
+</div>
+<div class="hero-actions">
+<span class="bridge-badge" id="bridgeBadge">VERIFICANDO</span>
+<div class="publish-buttons"><button class="btn" id="publishActive">Publicar scoreboard</button><button class="btn" id="publishMain">Publicar jogo principal</button><button class="btn" id="publishSummary">Publicar barra amarela</button><button class="btn primary" id="publishAll">● Publicar tudo</button></div>
+</div>
+</section>
+<section class="overlay-summary">
+<article class="panel metric"><span>SCOREBOARDS</span><b id="collectionCount">0</b><small>Coleções disponíveis</small></article>
+<article class="panel metric live"><span>NO AR</span><b id="activeName">—</b><small>Scoreboard ativo</small></article>
+<article class="panel metric"><span>EVENTOS</span><b id="activeCount">0/6</b><small>Selecionados no painel</small></article><article class="panel metric"><span>JOGO PRINCIPAL</span><b id="mainMatchName">—</b><small>Partida exibida em destaque</small></article>
+</section>
+<section class="overlay-layout">
+<section class="panel collections-panel">
+<div class="section-head">
+<div><h2>COLEÇÕES DE SCOREBOARD</h2><small>Organize painéis por competição, modalidade ou horário</small></div>
+<button class="btn primary" id="newCollection">＋ Novo</button>
+</div>
+<div class="collection-list" id="collectionList"></div>
+</section>
+<section class="panel editor-panel">
+<div class="section-head">
+<div><h2 id="editorTitle">SCOREBOARD</h2><small id="editorSubtitle">Selecione uma coleção para editar</small></div>
+<span class="on-air-badge" id="onAirBadge">FORA DO AR</span>
+</div>
+<div class="collection-form">
+<label>Nome do scoreboard<input id="collectionName" maxlength="60" placeholder="Ex.: Brasileirão"/></label>
+<label>Modalidade<input id="collectionSport" maxlength="40" placeholder="Ex.: Futebol"/></label>
+<button class="btn" id="saveCollection">Salvar dados</button>
+<button class="btn" id="duplicateCollection">Duplicar</button>
+<button class="btn danger" id="deleteCollection">Excluir</button>
+</div>
+<section class="rg-kicker-panel panel"><div class="rg-kicker-head"><div><h3>BARRA AMARELA · AGORA NA RODADA</h3><small>Configure fonte, rodada, estados e velocidade em um único bloco.</small></div><button class="btn primary" id="publishSummaryConfig">Publicar barra amarela</button></div><div class="rg-kicker-grid"><label>Fonte<select id="tickerScope"><option value="DAY">Jogos do dia</option><option value="ROUND">Jogos de uma rodada</option><option value="BOTH">Dia + rodada</option><option value="SELECTED">Somente jogos selecionados</option></select></label><label>Competição<select id="tickerCompetition"><option value="">Selecione</option></select></label><label>Rodada<select id="tickerRound"><option value="">Selecione</option></select></label><label>Exibição<select id="tickerMode"><option value="MARQUEE">Rolagem contínua</option><option value="POP">Pipocando</option></select></label><label>Velocidade<select id="tickerSpeed"><option value="90">Muito lenta</option><option value="70">Lenta</option><option value="55">Normal</option><option value="40">Rápida</option><option value="25">Muito rápida</option></select></label></div><div class="rg-kicker-options"><label><input id="tickerScheduled" type="checkbox" checked> Programados</label><label><input id="tickerLive" type="checkbox" checked> Ao vivo</label><label><input id="tickerFinal" type="checkbox" checked> Finalizados</label></div><div class="rg-kicker-preview" id="tickerPreview"><b>PRÉVIA</b><span> Configure a fonte para visualizar os jogos.</span></div></section><div class="match-selector-head">
+<div><h3>PARTIDAS DA COBERTURA</h3><small>Jogos de hoje aparecem primeiro; depois, os próximos dias em ordem cronológica.</small></div>
+<div class="match-selector-tools"><label>Exibir <select id="matchListFilter"><option value="ALL">Todos</option><option value="TODAY">Hoje</option><option value="LIVE">Ao vivo</option><option value="UPCOMING">Próximos</option><option value="FINAL">Finalizados</option></select></label><span id="selectionCounter">0 de 6</span></div>
+</div>
+<div class="match-selector" id="matchSelector"></div>
+</section>
+<aside class="panel preview-panel">
+<div class="section-head"><div><h2>PREVIEW DO SCOREBOARD</h2><small>Ordem exibida no Overlay Studio</small></div></div>
+<div class="scoreboard-preview" id="scoreboardPreview"></div>
+<div class="preview-actions">
+<button class="btn primary" id="setActive">● Colocar no ar</button>
+<button class="btn" id="refreshPreview">↻ Atualizar preview</button>
+</div>
+<div class="preview-note"><b>AO VIVO</b><span>A coleção ativa é usada pela Multicabine e pelo Overlay Studio.</span></div>
+</aside>
+</section>
+<section class="panel sidebar-order-panel">
+<div class="section-head"><div><h2>SEQUÊNCIA DA LATERAL DIREITA</h2><small>Defina a ordem editorial de jogos, classificações e confrontos no carrossel.</small></div><div><label>Tempo por página <input id="sidebarInterval" type="number" min="5" max="120" value="12" style="width:80px"> s</label> <button class="btn primary" id="publishSidebarOrder">Salvar sequência</button></div></div>
+<div class="sidebar-editor-grid"><section><h3 class="sidebar-subtitle">PAINÉIS NA SEQUÊNCIA</h3><div id="sidebarQueue" class="sidebar-queue"></div></section><section><h3 class="sidebar-subtitle">DISPONÍVEIS PARA ADICIONAR</h3><div id="sidebarAvailable" class="sidebar-available"></div></section></div>
+</section>
+<section class="panel sidebar-order-panel sidebar-lower-editor">
+<div class="section-head"><div><h2>CARROSSEL INFERIOR DA LATERAL</h2><small>Escolha manualmente jogos e escalações para a metade inferior da barra lateral.</small></div><div><label>Tempo por card <input id="sidebarLowerInterval" type="number" min="5" max="120" value="10" style="width:80px"> s</label> <button class="btn primary" id="publishSidebarLower">Salvar carrossel</button></div></div>
+<div class="sidebar-editor-grid"><section><h3 class="sidebar-subtitle">CARDS NA SEQUÊNCIA</h3><div id="sidebarLowerQueue" class="sidebar-queue"></div></section><section><h3 class="sidebar-subtitle">PARTIDAS DISPONÍVEIS</h3><div id="sidebarLowerAvailable" class="sidebar-available"></div></section></div>
+</section>
+</main>
+</div>
+<footer class="statusbar"><div><i class="ok"></i><b>SISTEMA</b><span>Operacional</span></div><div><i id="bridgeDot"></i><b>BRIDGE</b><span id="bridgeStatus">Verificando...</span></div><div><b id="footerCollections">0</b><span>SCOREBOARDS</span></div><div><b id="footerSelected">0</b><span>NO AR</span></div></footer>
+<script src="/control/overlay-control.js" type="module"></script>
+<script defer="True" src="/control/global-nav.js"></script></body>
+</html>

@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import{readFile}from'node:fs/promises';
+const root=new URL('../public/',import.meta.url);
+test('Beta 1.5.5 oferece editor de rodadas e associação estrutural de partidas',async()=>{const [store,html,js,matches]=await Promise.all([readFile(new URL('data-store.js',root),'utf8'),readFile(new URL('rounds.html',root),'utf8'),readFile(new URL('rounds.js',root),'utf8'),readFile(new URL('matches.js',root),'utf8')]);assert.match(store,/ROUNDS_KEY/);assert.match(store,/createRoundsBatch/);assert.match(html,/EDITOR DE RODADAS/);assert.match(js,/Gerar|Criar rodadas|createRoundsBatch/);assert.match(matches,/stageId/);assert.match(matches,/groupId/);assert.match(matches,/roundId/);});

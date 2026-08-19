@@ -1,8 +1,8 @@
 {
   "name": "rodrigol-2",
-  "version": "0.6.4-overlay.4.2",
+  "version": "2.2.2-rc.golive.1",
   "private": true,
-  "description": "RodriGol 2.0 — sistema operacional para cobertura esportiva.",
+  "description": "RodriGol Portal Go-Live 1 — baseline pronta para publicação remota.",
   "type": "module",
   "workspaces": [
     "apps/*",
@@ -19,7 +19,11 @@
     "dev:bridge": "npm run dev -w @rodrigol/obs-bridge",
     "start:overlay": "npm run start -w @rodrigol/browser-overlay",
     "dev:studio": "npm run dev -w @rodrigol/overlay-studio",
-    "start:studio": "npm run start -w @rodrigol/overlay-studio"
+    "start:studio": "npm run start -w @rodrigol/overlay-studio",
+    "preflight": "node scripts/preflight-operational.mjs",
+    "start:remote": "node scripts/start-remote.mjs",
+    "portal:check": "node --check apps/public-portal/public/app.js",
+    "check:golive": "node scripts/check-golive.mjs"
   },
   "engines": {
     "node": ">=20.0.0",

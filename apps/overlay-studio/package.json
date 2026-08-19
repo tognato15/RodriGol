@@ -1,8 +1,8 @@
 {
   "name": "@rodrigol/overlay-studio",
-  "version": "0.4.2-alpha.4",
+  "version": "2.0.0-rc.golive.1",
   "private": true,
-  "description": "Overlay RodriGol Studio Alpha 0.4.2: scoreboard em linha única, oito últimas ações com nomes completos e rodapé editorial preto.",
+  "description": "RodriGol Go-Live 1 — Overlay preservado.",
   "type": "module",
   "scripts": {
     "dev": "node server.mjs",
