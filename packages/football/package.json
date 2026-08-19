@@ -22,6 +22,7 @@
     "clean": "node -e \"const fs=require('node:fs'); fs.rmSync('dist',{recursive:true,force:true});\""
   },
   "dependencies": {
-    "@rodrigol/core": "1.7.0"
+    "@rodrigol/core": "2.0.0-alpha.1"
   }
 }
+
