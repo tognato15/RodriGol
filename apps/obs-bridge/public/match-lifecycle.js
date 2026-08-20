@@ -74,11 +74,19 @@ function syncKnockoutForMatch(match,coverage){
     if(tie.secondLegMatchId===match.id){tie.secondLegHomeScore=h;tie.secondLegAwayScore=a;}
     tie.aggregateHome=(Number(tie.firstLegHomeScore)||0)+(Number(tie.secondLegAwayScore)||0);
     tie.aggregateAway=(Number(tie.firstLegAwayScore)||0)+(Number(tie.secondLegHomeScore)||0);
-    const scoreHome=phase.legMode==='TWO_LEGS'?tie.aggregateHome:Number(tie.homeScore)||0;
-    const scoreAway=phase.legMode==='TWO_LEGS'?tie.aggregateAway:Number(tie.awayScore)||0;
-    if(scoreHome!==scoreAway){
-      tie.winnerClubId=scoreHome>scoreAway?tie.homeClubId:tie.awayClubId;
-      tie.winnerClubName=scoreHome>scoreAway?tie.homeClubName:tie.awayClubName;
+    const twoLegs=phase.legMode==='TWO_LEGS';
+    const matchFinished=id=>{if(!id)return false;const linked=getMatch(id);return linked&&FINAL_PHASES.has(String(linked.status||'').toUpperCase());};
+    const tieComplete=twoLegs?Boolean(tie.firstLegMatchId&&tie.secondLegMatchId&&matchFinished(tie.firstLegMatchId)&&matchFinished(tie.secondLegMatchId)):Boolean(tie.singleMatchId&&matchFinished(tie.singleMatchId));
+    if(!tieComplete){tie.winnerClubId='';tie.winnerClubName='';tie.status='LIVE';changed=true;continue;}
+    const scoreHome=twoLegs?tie.aggregateHome:Number(tie.homeScore)||0;
+    const scoreAway=twoLegs?tie.aggregateAway:Number(tie.awayScore)||0;
+    const penaltiesHome=Number(tie.penaltiesHome)||Number(coverage.penaltiesHome)||0;
+    const penaltiesAway=Number(tie.penaltiesAway)||Number(coverage.penaltiesAway)||0;
+    if(scoreHome!==scoreAway||penaltiesHome!==penaltiesAway){
+      const homeWins=scoreHome!==scoreAway?scoreHome>scoreAway:penaltiesHome>penaltiesAway;
+      tie.penaltiesHome=penaltiesHome;tie.penaltiesAway=penaltiesAway;
+      tie.winnerClubId=homeWins?tie.homeClubId:tie.awayClubId;
+      tie.winnerClubName=homeWins?tie.homeClubName:tie.awayClubName;
       tie.status='CONFIRMED';
     }else{
       tie.winnerClubId=''; tie.winnerClubName=''; tie.status='FINISHED';

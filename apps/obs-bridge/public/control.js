@@ -40,6 +40,8 @@ const PHASES = {
 };
 const EVENT_META = {
   GOAL: { label: 'GOL', icon: '⚽', color: '#18833a' },
+  PENALTY_SCORED: { label: 'PÊNALTI CONVERTIDO', icon: '✅', color: '#18833a' },
+  PENALTY_MISSED: { label: 'PÊNALTI PERDIDO', icon: '❌', color: '#9d2429' },
   YELLOW_CARD: { label: 'CARTÃO AMARELO', icon: '🟨', color: '#a48700' },
   RED_CARD: { label: 'CARTÃO VERMELHO', icon: '🟥', color: '#9d2429' },
   SUBSTITUTION: { label: 'SUBSTITUIÇÃO', icon: '🔁', color: '#216ba0' },
@@ -47,7 +49,7 @@ const EVENT_META = {
   INFORMATION: { label: 'INFORMAÇÃO', icon: 'ⓘ', color: '#287596' },
   REVIEW: { label: 'APURAÇÃO', icon: '⌕', color: '#52616b' }
 };
-const initialState = { homeScore: 0, awayScore: 0, homeScorers: [], awayScorers: [], events: [], phase: 'PRE_GAME', elapsedSeconds: 0, clockRunning: false, clockStartedAt: null, selectedType: 'GOAL', referee: '', attendance: '', weather: '', lineups: { home: { coach: '', starters: [], bench: [] }, away: { coach: '', starters: [], bench: [] } } };
+const initialState = { homeScore: 0, awayScore: 0, penaltiesHome: 0, penaltiesAway: 0, homeScorers: [], awayScorers: [], events: [], phase: 'PRE_GAME', elapsedSeconds: 0, clockRunning: false, clockStartedAt: null, selectedType: 'GOAL', referee: '', attendance: '', weather: '', lineups: { home: { coach: '', starters: [], bench: [] }, away: { coach: '', starters: [], bench: [] } } };
 let editingEventId = null;
 let lineupDraftDirty = false;
 
@@ -86,7 +88,8 @@ function effectiveElapsed(coverage = state) {
   return getEffectiveElapsedSeconds(coverage);
 }
 function freezeElapsed() { state.elapsedSeconds = effectiveElapsed(); state.clockStartedAt = null; }
-function saveState() { const result=syncMatchFromCoverage(match.id,{ ...state, updatedAt: new Date().toISOString() }); if(result) match=result.match; }
+let lastLocalMutationAt=0;
+function saveState() { lastLocalMutationAt=Date.now(); const result=syncMatchFromCoverage(match.id,{ ...state, updatedAt: new Date().toISOString() }); if(result) match=result.match; }
 function reloadState() { state = { ...initialState, ...normalizeCoverage(match, readCoverage(match.id, initialState)) }; state.lineups = normalizeOperationalLineups({ home: { ...initialState.lineups.home, ...(state.lineups?.home || {}) }, away: { ...initialState.lineups.away, ...(state.lineups?.away || {}) } }); render(); updateClockButton(); if (state.clockRunning) ensureTickTimer(); else stopTickTimer(); }
 function log(value) { $('log').textContent = typeof value === 'string' ? value : JSON.stringify(value, null, 2); }
 async function command(body) { return publishCommand(body); }
@@ -233,6 +236,7 @@ function scoreboardPayload() {
     homeShort: home.abbreviation, awayShort: away.abbreviation,
     homeCrest: crestPayload(home), awayCrest: crestPayload(away),
     homeScore: state.homeScore, awayScore: state.awayScore,
+    penaltiesHome: Number(state.penaltiesHome)||0, penaltiesAway: Number(state.penaltiesAway)||0,
     homeScorers: state.homeScorers.join(' · ') || '—', awayScorers: state.awayScorers.join(' · ') || '—',
     ...presentation,
     venue: match.venue || match.city || 'Local não informado',
@@ -380,9 +384,10 @@ function rebuildFromEvents() {
       if (event.team === 'HOME') { homeScore += 1; if (event.player) homeScorers.push(`${event.minute}' ${event.player}`); }
       if (event.team === 'AWAY') { awayScore += 1; if (event.player) awayScorers.push(`${event.minute}' ${event.player}`); }
     }
+    if(event.type==='PENALTY_SCORED'){ if(event.team==='HOME')penaltiesHome+=1; if(event.team==='AWAY')penaltiesAway+=1; }
     event.score = `${homeScore} × ${awayScore}`;
   });
-  state.homeScore = homeScore; state.awayScore = awayScore; state.homeScorers = homeScorers; state.awayScorers = awayScorers;
+  state.homeScore = homeScore; state.awayScore = awayScore; state.penaltiesHome=penaltiesHome; state.penaltiesAway=penaltiesAway; state.homeScorers = homeScorers; state.awayScorers = awayScorers;
   state.lineups = rebuildOperationalLineups(state.lineups,state.events);
 }
 function editEvent(id) {
@@ -563,6 +568,12 @@ function applyEvent(event) {
     if (event.team === 'HOME') { state.homeScore++; if (event.player) state.homeScorers.push(`${event.minute}' ${event.player}`); }
     if (event.team === 'AWAY') { state.awayScore++; if (event.player) state.awayScorers.push(`${event.minute}' ${event.player}`); }
   }
+  if(event.type==='PENALTY_SCORED'){
+    if(state.phase!=='PENALTIES')throw new Error('Marque a fase PÊNALTIS antes de registrar cobranças.');
+    if(event.team==='HOME')state.penaltiesHome=(Number(state.penaltiesHome)||0)+1;
+    if(event.team==='AWAY')state.penaltiesAway=(Number(state.penaltiesAway)||0)+1;
+  }
+  if(event.type==='PENALTY_MISSED'&&state.phase!=='PENALTIES')throw new Error('Marque a fase PÊNALTIS antes de registrar cobranças.');
   if (event.type === 'SUBSTITUTION') {
     if(!['HOME','AWAY'].includes(event.team))throw new Error('A substituição precisa pertencer ao mandante ou visitante.');
     const side=event.team==='AWAY'?'away':'home';
@@ -572,8 +583,18 @@ function applyEvent(event) {
     if(incoming&&!operational[side].bench.includes(incoming))operational[side].bench=[...operational[side].bench,incoming];
     state.lineups=applySubstitution(operational,event.team,outgoing,incoming,event);
   }
-  event.score = `${state.homeScore} × ${state.awayScore}`;
+  event.score = state.phase==='PENALTIES'&&['PENALTY_SCORED','PENALTY_MISSED'].includes(event.type)?`PÊNALTIS ${Number(state.penaltiesHome)||0} × ${Number(state.penaltiesAway)||0}`:`${state.homeScore} × ${state.awayScore}`;
   state.events.unshift(event);
+}
+function renderEventFast(){
+  $('homeScoreText').textContent=state.homeScore;
+  $('awayScoreText').textContent=state.awayScore;
+  $('homeScorers').textContent=state.homeScorers.join(' · ')||'—';
+  $('awayScorers').textContent=state.awayScorers.join(' · ')||'—';
+  $('eventCount').textContent=state.events.length;
+  document.querySelectorAll('.event-type').forEach(button=>button.classList.toggle('active',button.dataset.type===state.selectedType));
+  renderTimeline();
+  renderOnAirStatus();
 }
 async function publishEvent() {
   if (publishing) return;
@@ -581,7 +602,8 @@ async function publishEvent() {
   try {
     const event = makeEvent();
     if (editingEventId) { const index = state.events.findIndex(item => item.id === editingEventId); if (index >= 0) { event.id = editingEventId; state.events[index] = event; rebuildFromEvents(); } editingEventId = null; $('publishEvent').textContent = '⚡ REGISTRAR & PUBLICAR'; } else { applyEvent(event); }
-    saveState(); archiveCurrentCoverage('Timeline atualizada'); render(); await publishScoreboard(); await publishStudioSnapshot();
+    saveState(); archiveCurrentCoverage('Timeline atualizada'); renderEventFast();
+    Promise.allSettled([publishScoreboard(),publishStudioSnapshot()]).then(results=>{for(const result of results)if(result.status==='rejected')log(result.reason?.message||String(result.reason));});
     const title = event.type === 'GOAL' ? `GOL DO ${teamName(event.team).toUpperCase()}!` : event.label;
     const scoreText = `${home.shortName} ${state.homeScore} x ${state.awayScore} ${away.shortName}`;
     const text = event.type === 'GOAL' ? [title, event.player, scoreText].filter(Boolean).join(' — ') : [title, event.player, event.details].filter(Boolean).join(' — ');
@@ -597,6 +619,7 @@ function undoLast() {
     if (event.team === 'HOME') { state.homeScore = Math.max(0, state.homeScore - 1); if (event.player) state.homeScorers.pop(); }
     if (event.team === 'AWAY') { state.awayScore = Math.max(0, state.awayScore - 1); if (event.player) state.awayScorers.pop(); }
   }
+  if(event.type==='PENALTY_SCORED'){if(event.team==='HOME')state.penaltiesHome=Math.max(0,(Number(state.penaltiesHome)||0)-1);if(event.team==='AWAY')state.penaltiesAway=Math.max(0,(Number(state.penaltiesAway)||0)-1);}
   if(event.type==='SUBSTITUTION')state.lineups=rebuildOperationalLineups(state.lineups,state.events);
   saveState(); render(); publishScoreboard().catch(error => log(error.message));
 }
@@ -618,7 +641,7 @@ async function health() {
 }
 
 // Ligações da interface
-document.querySelectorAll('.event-type').forEach(button => button.addEventListener('click', () => { state.selectedType = button.dataset.type; saveState(); render(); renderEventPlayerOptions(); }));
+document.querySelectorAll('.event-type').forEach(button => button.addEventListener('click', () => { state.selectedType = button.dataset.type; document.querySelectorAll('.event-type').forEach(item=>item.classList.toggle('active',item===button)); renderSubstitutionFields(); renderEventPlayerOptions(); }));
 document.querySelectorAll('.flow').forEach(button => button.addEventListener('click', () => setPhase(button.dataset.phase)));
 $('matchPhase').addEventListener('change', event => setPhase(event.target.value));
 $('startClock').addEventListener('click', startClock);
@@ -648,7 +671,7 @@ document.querySelectorAll('[data-tool]').forEach(button => button.addEventListen
   if (type === 'note') { state.selectedType = 'INFORMATION'; $('details').focus(); }
   if (type === 'review') { state.selectedType = 'REVIEW'; $('player').focus(); }
   if (type === 'publication') location.href = '/control/editorial.html';
-  saveState(); render();
+  document.querySelectorAll('.event-type').forEach(item=>item.classList.toggle('active',item.dataset.type===state.selectedType)); renderSubstitutionFields(); renderEventPlayerOptions();
 }));
 
 window.addEventListener('storage', event => {
@@ -657,7 +680,7 @@ window.addEventListener('storage', event => {
 });
 window.addEventListener('rodrigol:data-changed', event => {
   const key = event.detail?.key;
-  if (key === `rodrigol-coverage-v1:${match.id}`) reloadState();
+  if (key === `rodrigol-coverage-v1:${match.id}`) { if(publishing||Date.now()-lastLocalMutationAt<1200)return; reloadState(); }
   else if (key === 'rodrigol-on-air-match-v1' || key === 'rodrigol-matches-v1') render();
 });
 window.addEventListener('beforeunload', () => { if (state.clockRunning) saveState(); });

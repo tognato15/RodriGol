@@ -6,7 +6,8 @@ function crest(team){return team?.crest?`<img src="${esc(team.crest)}" alt="${es
 function matchCard(match){
  const scheduled=match.status==='PROGRAMADO',status=match.status||match.phase||'';
  const score=scheduled?'×':`${Number(match.score?.home)||0} × ${Number(match.score?.away)||0}`;
- return `<article class="match-card" data-match-id="${esc(match.id)}"><div class="match-meta"><span>${esc(match.time||status)}</span><span class="${match.live?'live':''}">${esc(status)}</span></div><div class="match-teams"><div class="team">${crest(match.home)}<span>${esc(match.home?.name)}</span></div><div class="score">${esc(score)}</div><div class="team">${crest(match.away)}<span>${esc(match.away?.name)}</span></div></div><div class="match-foot">${esc(match.venue||match.round||'')}</div></article>`;
+ const penalties=(Number(match.penalties?.home)||Number(match.penalties?.away))?`<small class=\"penalty-score\">PÊNALTIS · ${Number(match.penalties?.home)||0} × ${Number(match.penalties?.away)||0}</small>`:'';
+ return `<article class="match-card" data-match-id="${esc(match.id)}"><div class="match-meta"><span>${esc(match.time||status)}</span><span class="${match.live?'live':''}">${esc(status)}</span></div><div class="match-teams"><div class="team">${crest(match.home)}<span>${esc(match.home?.name)}</span></div><div class="score">${esc(score)}${penalties}</div><div class="team">${crest(match.away)}<span>${esc(match.away?.name)}</span></div></div><div class="match-foot">${esc(match.venue||match.round||'')}</div></article>`;
 }
 function renderMatches(matches=[]){
  const box=$('matchGroups');if(!matches.length){box.innerHTML='<div class="empty">Nenhuma partida cadastrada para hoje.</div>';return}

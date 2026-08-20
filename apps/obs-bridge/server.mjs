@@ -125,11 +125,11 @@ function mergeUniquePublicEvents(groups=[]){
     for(const raw of group){
       const event=normalizePublicEvent(raw);
       const key=[
-        String(event.id||''),
         String(event.type||'').toUpperCase(),
         Number(event.minute)||0,
         String(event.team||'').toUpperCase(),
         String(event.player||'').trim().toLowerCase(),
+        String(event.details||'').trim().toLowerCase().replace(/\s+/g,' '),
         String(event.substitutionIn||'').trim().toLowerCase(),
         String(event.substitutionOut||'').trim().toLowerCase()
       ].join('|');
@@ -263,6 +263,10 @@ function publicRegionMatch(id,baseMatch=null){
       home:Number(firstValue(x=>x?.homeScore,coverage.homeScore??baseMatch?.score?.home??0))||0,
       away:Number(firstValue(x=>x?.awayScore,coverage.awayScore??baseMatch?.score?.away??0))||0
     },
+    penalties:{
+      home:Number(firstValue(x=>x?.penaltiesHome,coverage.penaltiesHome??baseMatch?.penalties?.home??0))||0,
+      away:Number(firstValue(x=>x?.penaltiesAway,coverage.penaltiesAway??baseMatch?.penalties?.away??0))||0
+    },
     scorers:{
       home:firstValue(x=>Array.isArray(x?.homeGoals)&&x.homeGoals.length?x.homeGoals:null,coverage.homeScorers||baseMatch?.scorers?.home||[]),
       away:firstValue(x=>Array.isArray(x?.awayGoals)&&x.awayGoals.length?x.awayGoals:null,coverage.awayScorers||baseMatch?.scorers?.away||[])
@@ -293,6 +297,7 @@ function mergePublicMatch(base={},live=null){
     home:{...(base.home||{}),...(live.home||{})},
     away:{...(base.away||{}),...(live.away||{})},
     score:{...(base.score||{}),...(live.score||{})},
+    penalties:{...(base.penalties||{}),...(live.penalties||{})},
     scorers:{...(base.scorers||{}),...(live.scorers||{})},
     clock:{...(base.clock||{}),...(live.clock||{})},
     facts:{...(base.facts||{}),...(live.facts||{})},
