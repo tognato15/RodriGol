@@ -684,8 +684,8 @@ window.addEventListener('rodrigol:data-changed', event => {
   else if (key === 'rodrigol-on-air-match-v1' || key === 'rodrigol-matches-v1') render();
 });
 window.addEventListener('beforeunload', () => { if (state.clockRunning) saveState(); });
-setInterval(() => { $('now').textContent = new Date().toLocaleTimeString('pt-BR'); renderOtherMatches(); }, 1000);
-setInterval(health, 2500);
+setInterval(() => { $('now').textContent = new Date().toLocaleTimeString('pt-BR'); if(!document.hidden)renderOtherMatches(); }, 4000);
+setInterval(() => { if(!document.hidden)health(); }, 5000);
 health();
 try {
   render();

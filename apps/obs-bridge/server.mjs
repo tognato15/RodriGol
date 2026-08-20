@@ -427,7 +427,8 @@ function backupRecords(backup={}){
 }
 function publicHome(date){
   const target=publicDate(date),matches=unionPublicMatches(publicMatchesForDate(target),publicLiveMatches()),standings=publicStandings(),news=publicNews(),highlights=publicHighlights();
-  return {ok:true,generatedAt:new Date().toISOString(),date:target,revision:dataRevision,matches,standings:standings.slice(0,4),news:news.slice(0,6),highlights};
+  const radioRaw=persistentData.get("rodrigol-radio-config-v1")||{};const radio={active:radioRaw.active===true,name:String(radioRaw.name||"Rádio RodriGol"),streamUrl:String(radioRaw.streamUrl||""),autoplay:radioRaw.autoplay===true};
+  return {ok:true,generatedAt:new Date().toISOString(),date:target,revision:dataRevision,matches,standings:standings.slice(0,4),news:news.slice(0,6),highlights,radio};
 }
 
 
@@ -567,7 +568,7 @@ const server=createServer(async(request,response)=>{
     }catch(error){json(response,400,{ok:false,error:error.message||"Falha ao importar backup."});}
     return;
   }
-  if(pathname==="/api/data/snapshot"){if(!requireAuth(request,response))return;json(response,200,{ok:true,revision:dataRevision,records:Object.fromEntries(persistentData)});return;}
+  if(pathname==="/api/data/snapshot"){if(!requireAuth(request,response))return;const since=Number(url.searchParams.get("since"))||0;if(since>=dataRevision){json(response,200,{ok:true,revision:dataRevision,unchanged:true});return;}json(response,200,{ok:true,revision:dataRevision,records:Object.fromEntries(persistentData)});return;}
   if(pathname.startsWith("/api/data/")){
     if(!requireAuth(request,response))return;
     const key=decodeURIComponent(pathname.slice(10)||"");

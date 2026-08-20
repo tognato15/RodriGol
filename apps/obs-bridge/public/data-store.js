@@ -232,17 +232,17 @@ async function hydrateRemoteData(){
 async function pollRemoteData(){
   const cfg=runtimeForDataSync(); if(!cfg.remoteStorageEnabled||document.hidden)return;
   try{
-    const response=await fetch(`${bridgeBaseForData()}/api/data/snapshot`,{credentials:'include',headers:authHeadersForData()});
+    const response=await fetch(`${bridgeBaseForData()}/api/data/snapshot?since=${encodeURIComponent(remoteDataRevision)}`,{credentials:'include',headers:authHeadersForData()});
     if(!response.ok)return;
     const snapshot=await response.json();
-    if((Number(snapshot.revision)||0)<=remoteDataRevision)return;
+    if(snapshot.unchanged||(Number(snapshot.revision)||0)<=remoteDataRevision)return;
     remoteDataRevision=Number(snapshot.revision)||0;
     await reconcileRemoteSnapshot(snapshot);
   }catch{}
 }
 await loadWideData().catch(error=>reportStorageError('wide-data',error));
 await hydrateRemoteData();
-setInterval(pollRemoteData,5000);
+setInterval(pollRemoteData,7000);
 async function loadClubCrests(){if(!assetDb)return;await new Promise((resolve,reject)=>{const tx=assetDb.transaction(CLUB_ASSET_STORE,'readonly'),store=tx.objectStore(CLUB_ASSET_STORE),req=store.openCursor();req.onsuccess=()=>{const cursor=req.result;if(cursor){clubCrestCache.set(String(cursor.key),cursor.value||'');cursor.continue();}else resolve();};req.onerror=()=>reject(req.error);});}
 async function setClubCrest(id,value){await putAssetLocal(CLUB_ASSET_STORE,id,value||'');queueRemoteAsset('club',id,value||'');}
 async function deleteClubCrest(id){await putAssetLocal(CLUB_ASSET_STORE,id,'');queueRemoteAsset('club',id,'');}

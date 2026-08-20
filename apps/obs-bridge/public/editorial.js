@@ -15,6 +15,8 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({
 }[char]));
 
 let filter = 'ALL';
+let showHistoricalEvents = false;
+const MAX_COLUMN_ITEMS = 80;
 let editorial = getEditorialState();
 const livePhases = ['FIRST_HALF', 'SECOND_HALF', 'EXTRA_TIME', 'PENALTIES'];
 const agendaStatuses = ['RECEIVED', 'ANALYSIS', 'PRIORITY', 'SCHEDULED', 'PUBLISHED'];
@@ -23,17 +25,30 @@ function club(id) {
   return getClubs().find(item => item.id === id) || { shortName: 'Clube removido' };
 }
 
+function localDateKey(value = new Date()) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+}
+function eventOperationalToday(event, match, coverage) {
+  if (showHistoricalEvents) return true;
+  if (livePhases.includes(String(coverage?.phase || match?.status || ''))) return true;
+  const queueSince = String(editorial.queueSince || localDateKey());
+  const eventDay = event?.createdAt ? localDateKey(event.createdAt) : String(match?.date || '');
+  return Boolean(eventDay && eventDay >= queueSince);
+}
 function allEvents() {
   const result = [];
   for (const match of getMatches()) {
+    if (!showHistoricalEvents && String(match.date || '') && String(match.date) < String(editorial.queueSince || localDateKey())) {
+      const status = String(match.status || '').toUpperCase();
+      if (!livePhases.includes(status)) continue;
+    }
     const coverage = readCoverage(match.id, { events: [], phase: match.status || 'PRE_GAME' });
     for (const event of coverage.events || []) {
+      if (!eventOperationalToday(event, match, coverage)) continue;
       result.push({
-        ...event,
-        matchId: match.id,
-        match,
-        home: club(match.homeClubId),
-        away: club(match.awayClubId)
+        ...event, matchId: match.id, match, home: club(match.homeClubId), away: club(match.awayClubId)
       });
     }
   }
@@ -217,8 +232,10 @@ function eventCard(event, status) {
 }
 
 function renderColumn(id, events, status) {
-  $(id).innerHTML = events.length
-    ? events.map(event => eventCard(event, status)).join('')
+  const visible = events.slice(0, MAX_COLUMN_ITEMS);
+  const hidden = Math.max(0, events.length - visible.length);
+  $(id).innerHTML = visible.length
+    ? visible.map(event => eventCard(event, status)).join('') + (hidden ? `<div class="empty">${hidden} item(ns) adicionais ocultos para manter a Mesa rápida. Use a busca para localizar um evento específico.</div>` : '')
     : '<div class="empty">Nenhuma informação nesta etapa.</div>';
 }
 
@@ -433,6 +450,19 @@ function bind() {
     };
   });
 }
+
+$('showHistorical').onclick = () => { showHistoricalEvents = !showHistoricalEvents; $('showHistorical').textContent = showHistoricalEvents ? '◷ Ocultar históricos' : '◷ Mostrar históricos'; render(); };
+$('cleanupEditorial').onclick = () => {
+  const today = localDateKey();
+  if (!confirm(`Arquivar da fila editorial os eventos anteriores a ${today}? O histórico das partidas não será apagado.`)) return;
+  editorial.queueSince = today;
+  const validIds = new Set(allEvents().map(event => event.id));
+  editorial.items = Object.fromEntries(Object.entries(editorial.items || {}).filter(([id, item]) => validIds.has(id) || item?.status === 'PUBLISHED'));
+  editorial.lastQueueCleanupAt = nowIso();
+  showHistoricalEvents = false;
+  persist();
+  render();
+};
 
 $('publishSelected').onclick = async () => {
   const selected = allEvents().filter(event => dataOf(event).selected);
