@@ -1,4 +1,4 @@
-import { publishCommand } from './bridge-client.js';
+import { publishCommand, publishCommands } from './bridge-client.js';
 import {getMatches,getActiveScoreboardMatchIds,getClub,readCoverage,getOverlayControlState,getCompetitions,getStandingsState,getSidebarSequenceState,getSidebarLowerState,getKnockoutState,getClubs,findCompetitionByName} from './data-store.js';
 import {buildMatchPresentationPayload,deriveVisualState,normalizeCoverage,shouldShowClock} from './match-presentation.js';
 import {standingPanel} from './standings-engine.js';
@@ -77,9 +77,9 @@ function buildStudioCollections(){
 }
 export async function publishStudioLiveUpdate(){
   const {matches,round}=buildStudioCollections();
-  await Promise.all([
-    command({type:'show',region:'round-scoreboard',payload:round}),
-    command({type:'show',region:'live-events',payload:eventsPayload(matches)})
+  return publishCommands([
+    {type:'show',region:'round-scoreboard',payload:round},
+    {type:'show',region:'live-events',payload:eventsPayload(matches)}
   ]);
 }
 export function scheduleStudioSnapshot(delayMs=2500){
@@ -89,14 +89,13 @@ export function scheduleStudioSnapshot(delayMs=2500){
 export async function publishStudioSnapshot(){
   const {matches,selected,round}=buildStudioCollections();
   const all=matches.map(studioMatchPayload),settings=getOverlayControlState(),summary=summaryMatches(matches,selected,settings).map(studioMatchPayload).map(i=>({...i,mode:settings.yellowTickerMode==='POP'?'POP':'MARQUEE',speedSeconds:Math.min(120,Math.max(15,Number(settings.yellowTickerSpeed)||60))}));
-  await Promise.all([
-    command({type:'show',region:'round-scoreboard',payload:round}),
-    command({type:'show',region:'live-events',payload:eventsPayload(matches)}),
-    command({type:'show',region:'round-summary',payload:summary}),
-    command({type:'show',region:'studio-sidebar',payload:sidebarPayload(all)})
+  // Uma única viagem HTTP publica todas as regiões. O Bridge continua emitindo um envelope
+  // por região para os clientes WebSocket, mas a Cabine não disputa conexões com 5 POSTs.
+  return publishCommands([
+    {type:'show',region:'round-scoreboard',payload:round},
+    {type:'show',region:'live-events',payload:eventsPayload(matches)},
+    {type:'show',region:'round-summary',payload:summary},
+    {type:'show',region:'studio-sidebar',payload:sidebarPayload(all)},
+    {type:'show',region:'public-match-data',payload:all}
   ]);
-  // A API pública já lê partidas/cobertura da base central. Esta região fica como fallback
-  // de compatibilidade e é atualizada apenas nos snapshots completos, não a cada lance.
-  try{await command({type:'show',region:'public-match-data',payload:all});}
-  catch(error){console.warn('Portal público: public-match-data não pôde ser atualizado neste ciclo.',error);}
 }

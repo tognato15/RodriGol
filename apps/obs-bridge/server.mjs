@@ -41,6 +41,9 @@ const remoteStorage=new Map();
 const persistentData=new Map();
 let dataRevision=0;
 let dataWriteQueue=Promise.resolve();
+let dataPersistTimer=null;
+let pendingPersistWaiters=[];
+const DATA_PERSIST_DEBOUNCE_MS=120;
 let lastDataSavedAt=null;
 let lastBackupAt=null;
 let backupTimer=null;
@@ -444,7 +447,17 @@ async function loadPersistentData(){
   for(const name of await listBackupFiles()){try{const parsed=JSON.parse(await readFile(join(backupRoot,name),"utf8"));persistentData.clear();dataRevision=Number(parsed.revision)||0;lastDataSavedAt=parsed.updatedAt||null;for(const [key,value] of Object.entries(parsed.records||{}))persistentData.set(key,value);console.warn(`Base recuperada automaticamente do backup ${name}.`);await persistData();return;}catch{}}
 }
 async function persistData(){await mkdir(dataRoot,{recursive:true});const temp=`${dataFile}.tmp`;const envelope=persistentEnvelope("runtime");await writeFile(temp,JSON.stringify(envelope,null,2),"utf8");await rename(temp,dataFile);lastDataSavedAt=envelope.updatedAt;}
-function queuePersistData(){dataWriteQueue=dataWriteQueue.then(persistData).then(()=>{scheduleAutomaticBackup();}).catch(error=>console.error("Falha ao persistir dados:",error));return dataWriteQueue;}
+function flushQueuedPersistence(){
+  if(dataPersistTimer){clearTimeout(dataPersistTimer);dataPersistTimer=null;}
+  const waiters=pendingPersistWaiters;pendingPersistWaiters=[];
+  dataWriteQueue=dataWriteQueue.then(persistData).then(()=>{scheduleAutomaticBackup();for(const waiter of waiters)waiter.resolve();}).catch(error=>{console.error("Falha ao persistir dados:",error);for(const waiter of waiters)waiter.reject(error);});
+  return dataWriteQueue;
+}
+function queuePersistData(delayMs=DATA_PERSIST_DEBOUNCE_MS){
+  const promise=new Promise((resolve,reject)=>pendingPersistWaiters.push({resolve,reject}));
+  if(!dataPersistTimer){dataPersistTimer=setTimeout(flushQueuedPersistence,Math.max(0,Number(delayMs)||0));dataPersistTimer.unref?.();}
+  return promise;
+}
 function notifyPublicEvent(kind="data",detail={}){
   const payload=`data: ${JSON.stringify({kind,revision:dataRevision,sequence,...detail,at:new Date().toISOString()})}\n\n`;
   for(const response of [...publicEventClients]){try{response.write(payload);}catch{publicEventClients.delete(response);}}
@@ -575,7 +588,7 @@ const server=createServer(async(request,response)=>{
       persistentData.clear();
       for(const [key,value] of imported)persistentData.set(key,value);
       dataRevision+=1;
-      await queuePersistData();
+      await queuePersistData(0);
       broadcastDataChange("__backup_import__",{records:imported.size},false,"backup-import");
       json(response,200,{ok:true,revision:dataRevision,records:imported.size});
     }catch(error){json(response,400,{ok:false,error:error.message||"Falha ao importar backup."});}
@@ -587,13 +600,26 @@ const server=createServer(async(request,response)=>{
     const key=decodeURIComponent(pathname.slice(10)||"");
     if(!key){json(response,400,{ok:false,error:"Chave obrigatória."});return;}
     if(request.method==="GET"){json(response,200,{ok:true,key,revision:dataRevision,value:persistentData.has(key)?persistentData.get(key):null});return;}
-    if(request.method==="PUT"){try{const body=JSON.parse(await readBody(request));persistentData.set(key,body.value);dataRevision+=1;await queuePersistData();const envelope=broadcastDataChange(key,body.value,false,body.source||"api");json(response,200,{ok:true,key,revision:dataRevision,envelope});}catch(error){json(response,400,{ok:false,error:error.message||"JSON inválido"});}return;}
-    if(request.method==="DELETE"){persistentData.delete(key);dataRevision+=1;await queuePersistData();const envelope=broadcastDataChange(key,null,true,"api");json(response,200,{ok:true,key,revision:dataRevision,envelope});return;}
+    if(request.method==="PUT"){try{const body=JSON.parse(await readBody(request));persistentData.set(key,body.value);dataRevision+=1;const envelope=broadcastDataChange(key,body.value,false,body.source||"api");queuePersistData().catch(()=>{});json(response,202,{ok:true,key,revision:dataRevision,envelope,persisted:false});}catch(error){json(response,400,{ok:false,error:error.message||"JSON inválido"});}return;}
+    if(request.method==="DELETE"){persistentData.delete(key);dataRevision+=1;const envelope=broadcastDataChange(key,null,true,"api");queuePersistData().catch(()=>{});json(response,202,{ok:true,key,revision:dataRevision,envelope,persisted:false});return;}
   }
   if(pathname.startsWith("/api/storage/")){if(!requireAuth(request,response))return;const namespace=decodeURIComponent(pathname.slice(13)||"default");if(request.method==="GET"){json(response,200,{namespace,payload:remoteStorage.get(namespace)||null,updatedAt:remoteStorage.get(`${namespace}:updatedAt`)||null});return;}if(request.method==="PUT"){try{const payload=JSON.parse(await readBody(request));remoteStorage.set(namespace,payload);remoteStorage.set(`${namespace}:updatedAt`,new Date().toISOString());json(response,200,{ok:true,namespace});}catch(error){json(response,400,{ok:false,error:error.message||"JSON inválido"});}return;}}
+  if(pathname==="/api/commands/batch"&&request.method==="POST"){
+    if(!requireAuth(request,response))return;
+    const started=performance.now();
+    try{
+      const body=JSON.parse(await readBody(request));
+      const commands=Array.isArray(body)?body:Array.isArray(body?.commands)?body.commands:[];
+      if(!commands.length||commands.length>20||commands.some(command=>!validCommand(command))){json(response,400,{ok:false,error:"Lote de comandos de overlay inválido."});return;}
+      const envelopes=commands.map(command=>broadcast(command,"api-batch"));
+      json(response,202,{ok:true,count:envelopes.length,envelopes,serverTimingMs:Math.round((performance.now()-started)*100)/100});
+    }catch(error){json(response,400,{ok:false,error:error instanceof Error?error.message:"JSON inválido"});}
+    return;
+  }
   if(pathname==="/api/commands"&&request.method==="POST"){
     if(!requireAuth(request,response))return;
-    try{const command=JSON.parse(await readBody(request));if(!validCommand(command)){json(response,400,{ok:false,error:"Comando de overlay inválido."});return;}const envelope=broadcast(command,"api");json(response,202,{ok:true,envelope});}catch(error){json(response,400,{ok:false,error:error instanceof Error?error.message:"JSON inválido"});}return;
+    const started=performance.now();
+    try{const command=JSON.parse(await readBody(request));if(!validCommand(command)){json(response,400,{ok:false,error:"Comando de overlay inválido."});return;}const envelope=broadcast(command,"api");json(response,202,{ok:true,envelope,serverTimingMs:Math.round((performance.now()-started)*100)/100});}catch(error){json(response,400,{ok:false,error:error instanceof Error?error.message:"JSON inválido"});}return;
   }
   if(pathname==="/portal"||pathname==="/portal/"){await serve(bridgeRoot,"/portal/index.html",response);return;}
   if(pathname==="/legacy"){redirect(response,"/legacy/");return;}

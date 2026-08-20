@@ -35,6 +35,13 @@ export function publishCommand(body) {
   return bridgeJson('/api/commands', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 }
 
+export function publishCommands(commands = []) {
+  const items = Array.isArray(commands) ? commands.filter(Boolean) : [];
+  if (!items.length) return Promise.resolve({ ok: true, envelopes: [] });
+  if (items.length === 1) return publishCommand(items[0]).then(result => ({ ...result, envelopes: result?.envelope ? [result.envelope] : [] }));
+  return bridgeJson('/api/commands/batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ commands: items }) });
+}
+
 export function readBridgeHealth() { return bridgeJson('/health'); }
 export function readBridgeState() { return bridgeJson('/api/state'); }
 export function readNetworkStatus() { return bridgeJson('/api/network'); }
