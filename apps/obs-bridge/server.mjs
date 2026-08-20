@@ -468,6 +468,12 @@ function broadcastDataChange(key,value,deleted=false,source="api"){
   notifyPublicEvent("data",{key});
   return envelope;
 }
+function broadcastDataPatch(key,patch,source="api"){
+  const envelope={type:"data-patch",revision:dataRevision,key,patch,source,sentAt:new Date().toISOString()};
+  for(const socket of clients)send(socket,envelope);
+  notifyPublicEvent("data",{key,patch:true});
+  return envelope;
+}
 await loadPersistentData();
 
 function json(response,status,body){response.writeHead(status,{"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store","Access-Control-Allow-Origin":allowedOrigin});response.end(JSON.stringify(body));}
@@ -595,6 +601,22 @@ const server=createServer(async(request,response)=>{
     return;
   }
   if(pathname==="/api/data/snapshot"){if(!requireAuth(request,response))return;const since=Number(url.searchParams.get("since"))||0;if(since>=dataRevision){json(response,200,{ok:true,revision:dataRevision,unchanged:true});return;}json(response,200,{ok:true,revision:dataRevision,records:Object.fromEntries(persistentData)});return;}
+  if(pathname.startsWith("/api/data-patch/")&&request.method==="PATCH"){
+    if(!requireAuth(request,response))return;
+    const parts=pathname.slice("/api/data-patch/".length).split("/").map(decodeURIComponent),kind=parts[0],id=parts.slice(1).join("/");
+    try{
+      const body=JSON.parse(await readBody(request)),value=body?.value,source=body?.source||"api-patch";
+      if(!id||!value||typeof value!=="object"){json(response,400,{ok:false,error:"Patch inválido."});return;}
+      let key="",patchValue=value;
+      if(kind==="match"){
+        key="rodrigol-matches-v1";const rows=Array.isArray(persistentData.get(key))?[...persistentData.get(key)]:[];const index=rows.findIndex(item=>String(item?.id)===id);if(index>=0)rows[index]=value;else rows.push(value);persistentData.set(key,rows);
+      }else if(kind==="history"){
+        key="rodrigol-history-v1";const state=persistentData.get(key)||{entries:[]},entries=Array.isArray(state.entries)?[...state.entries]:[];const index=entries.findIndex(item=>String(item?.matchId)===id);if(index>=0)entries[index]={...entries[index],...value};else entries.unshift(value);persistentData.set(key,{...state,entries:entries.slice(0,500)});
+      }else{json(response,404,{ok:false,error:"Tipo de patch desconhecido."});return;}
+      dataRevision+=1;const envelope=broadcastDataPatch(key,{op:"upsert",value:patchValue},source);queuePersistData().catch(()=>{});json(response,202,{ok:true,key,revision:dataRevision,envelope,persisted:false});
+    }catch(error){json(response,400,{ok:false,error:error?.message||"Patch inválido."});}
+    return;
+  }
   if(pathname.startsWith("/api/data/")){
     if(!requireAuth(request,response))return;
     const key=decodeURIComponent(pathname.slice(10)||"");

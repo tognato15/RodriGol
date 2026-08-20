@@ -119,10 +119,10 @@ function queueWidePersistence(key, value, deleted=false, syncRemote=true){
       .catch(error=>{queueRemoteRetry(key,value,deleted);window.dispatchEvent(new CustomEvent('rodrigol:remote-storage-error',{detail:{key,error:error.message,retrying:true}}));});
   }
 }
-function write(key, value) {
+function write(key, value, syncRemote = true) {
   if(isWideDataKey(key)){
     wideDataCache.set(key,structuredClone(value));
-    queueWidePersistence(key,value,false);
+    queueWidePersistence(key,value,false,syncRemote);
   }else{
     const serialized=JSON.stringify(value);
     try{localStorage.setItem(key,serialized);}catch(error){
@@ -245,6 +245,14 @@ await loadWideData().catch(error=>reportStorageError('wide-data',error));
 await hydrateRemoteData();
 let remoteDataSocket=null;
 function applyRemoteDataEnvelope(envelope={}){
+  if(envelope.type==='data-patch'){
+    const revision=Number(envelope.revision)||0; remoteDataRevision=Math.max(remoteDataRevision,revision);
+    if(envelope.source===clientInstanceId)return;
+    const key=String(envelope.key||''), patch=envelope.patch||{};
+    if(key===MATCHES_KEY&&patch.op==='upsert'&&patch.value?.id){const rows=getMatches();const i=rows.findIndex(x=>x.id===patch.value.id);if(i>=0)rows[i]=patch.value;else rows.push(patch.value);wideDataCache.set(key,rows);queueWidePersistence(key,rows,false,false);window.dispatchEvent(new CustomEvent('rodrigol:data-changed',{detail:{key,value:rows,source:'remote-ws-patch'}}));return;}
+    if(key===HISTORY_KEY&&patch.op==='upsert'&&patch.value?.matchId){const history=getHistoryState();const i=history.entries.findIndex(x=>x.matchId===patch.value.matchId);if(i>=0)history.entries[i]={...history.entries[i],...patch.value};else history.entries.unshift(patch.value);history.entries=history.entries.slice(0,500);wideDataCache.set(key,history);queueWidePersistence(key,history,false,false);window.dispatchEvent(new CustomEvent('rodrigol:data-changed',{detail:{key,value:history,source:'remote-ws-patch'}}));return;}
+    return;
+  }
   if(envelope.type!=='data-change')return;
   const revision=Number(envelope.revision)||0;
   remoteDataRevision=Math.max(remoteDataRevision,revision);
@@ -296,7 +304,19 @@ export function deleteClub(id) { saveClubs(getClubs().filter(item => item.id !==
 export function getClub(id) { return getClubs().find(item => item.id === id) || null; }
 export function getMatches(){if(!has(MATCHES_KEY))return write(MATCHES_KEY,seedMatches);return parse(MATCHES_KEY,[]);}
 export function saveMatches(matches) { return write(MATCHES_KEY, matches); }
-export function upsertMatch(match) { const matches = getMatches(); const index = matches.findIndex(item => item.id === match.id); if (index >= 0) matches[index] = match; else matches.push(match); return saveMatches(matches); }
+function queueRemoteRecordPatch(kind,id,value){
+  const cfg=runtimeForDataSync(); if(!cfg.remoteStorageEnabled)return;
+  fetch(`${bridgeBaseForData()}/api/data-patch/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`,{
+    method:'PATCH',credentials:'include',headers:authHeadersForData({'Content-Type':'application/json'}),
+    body:JSON.stringify({value,source:clientInstanceId})
+  }).then(r=>{if(!r.ok)throw new Error(`Servidor respondeu ${r.status}`);return r.json();})
+    .then(result=>{remoteDataRevision=Math.max(remoteDataRevision,Number(result.revision)||0);})
+    .catch(()=>{ // fallback seguro: a fila tradicional reenviará a coleção completa
+      const key=kind==='match'?MATCHES_KEY:HISTORY_KEY;
+      queueRemoteRetry(key,wideDataCache.get(key),false);
+    });
+}
+export function upsertMatch(match) { const matches = getMatches(); const index = matches.findIndex(item => item.id === match.id); if (index >= 0) matches[index] = match; else matches.push(match); write(MATCHES_KEY,matches,false); queueRemoteRecordPatch('match',match.id,match); return matches; }
 export function deleteMatch(id) {
   const activeId = parse(ACTIVE_MATCH_KEY, '');
   const onAirId = parse(ON_AIR_MATCH_KEY, '');
@@ -366,7 +386,9 @@ export function archiveCoverage(entry) {
   if (previousIndex >= 0) history.entries[previousIndex] = { ...history.entries[previousIndex], ...normalized };
   else history.entries.unshift(normalized);
   history.entries = history.entries.slice(0, 500);
-  saveHistoryState(history);
+  const compact=compactHistoryState(history);
+  write(HISTORY_KEY,compact,false);
+  queueRemoteRecordPatch('history',normalized.matchId,normalized);
   return normalized;
 }
 export function getHistoryEntry(matchId) { return getHistoryState().entries.find(item => item.matchId === matchId) || null; }
