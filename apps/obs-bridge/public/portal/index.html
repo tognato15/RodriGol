@@ -407,7 +407,7 @@ function setView(name){document.querySelectorAll('.portal-view').forEach(view=>v
 function route(){
   clearInterval(matchTimer);
   const hash=location.hash.slice(1)||'home';
-  if(hash.startsWith('match=')){setView('match');updatePublicSideNav('games');const id=decodeURIComponent(hash.slice(6));loadMatch(id);matchTimer=setInterval(()=>loadMatch(id),3000);return}
+  if(hash.startsWith('match=')){setView('match');updatePublicSideNav('games');const id=decodeURIComponent(hash.slice(6));loadMatch(id);matchTimer=setInterval(()=>loadMatch(id),30000);return}
   if(hash==='standings'){setView('standings');updatePublicSideNav('standings');renderRightSidebar(portalHomeMatches,null);loadHome(true);return}
   if(hash==='news'){setView('news');updatePublicSideNav('news');renderRightSidebar(portalHomeMatches,null);loadHome(true);return}
   if(hash==='competitions'){setView('competitions');updatePublicSideNav('competitions');renderRightSidebar(portalHomeMatches,null);return}
@@ -418,4 +418,9 @@ function route(){
 function tick(){const now=new Date();$('clock').textContent=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});const weekday=now.toLocaleDateString('pt-BR',{weekday:'long'}).replace('-feira','-FEIRA').toUpperCase();$('weekdayLabel').textContent=weekday;$('todayLabel').textContent=now.toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}).toUpperCase()}
 $('refresh').addEventListener('click',()=>loadHome(true));
 $('editorialPrev')?.addEventListener('click',()=>{showEditorial(editorialIndex-1);restartEditorialTimer()});
-$('editorialNext')?.addEventListener('click',()=>{showEditorial(editorialIndex+1);restartEditorialTimer()});window.addEventListener('hashchange',route);tick();setInterval(tick,1000);setInterval(refreshVisibleMatchClock,1000);setInterval(()=>{if(!document.hidden&&!location.hash.startsWith('#match='))loadHome()},5000);route();</script></body></html>
+$('editorialNext')?.addEventListener('click',()=>{showEditorial(editorialIndex+1);restartEditorialTimer()});window.addEventListener('hashchange',route);tick();setInterval(tick,1000);setInterval(refreshVisibleMatchClock,1000);
+let publicRefreshTimer=null;
+function schedulePublicRefresh(){clearTimeout(publicRefreshTimer);publicRefreshTimer=setTimeout(()=>{if(document.hidden)return;if(location.hash.startsWith('#match=')){const id=decodeURIComponent(location.hash.slice(7));loadMatch(id);}else loadHome();},120);}
+try{const publicEvents=new EventSource('/api/public/events');publicEvents.onmessage=schedulePublicRefresh;publicEvents.onerror=()=>{};}catch{}
+// fallback de segurança caso SSE seja interrompido por proxy/rede.
+setInterval(()=>{if(!document.hidden){if(location.hash.startsWith('#match=')){const id=decodeURIComponent(location.hash.slice(7));loadMatch(id);}else loadHome()}},30000);route();</script></body></html>

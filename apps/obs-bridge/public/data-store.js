@@ -1,3 +1,4 @@
+import { createManagedSocket } from './bridge-client.js';
 const CLUBS_KEY = 'rodrigol-clubs-v1';
 const MATCHES_KEY = 'rodrigol-matches-v1';
 const ACTIVE_MATCH_KEY = 'rodrigol-active-match-v1';
@@ -242,7 +243,37 @@ async function pollRemoteData(){
 }
 await loadWideData().catch(error=>reportStorageError('wide-data',error));
 await hydrateRemoteData();
-setInterval(pollRemoteData,7000);
+let remoteDataSocket=null;
+function applyRemoteDataEnvelope(envelope={}){
+  if(envelope.type!=='data-change')return;
+  const revision=Number(envelope.revision)||0;
+  remoteDataRevision=Math.max(remoteDataRevision,revision);
+  if(envelope.source===clientInstanceId)return;
+  const key=String(envelope.key||'');
+  if(!key)return;
+  if(isRemoteAssetKey(key)){applyRemoteAssetRecord(key,envelope.deleted?null:envelope.value).catch(()=>{});return;}
+  if(!isWideDataKey(key))return;
+  if(envelope.deleted){
+    wideDataCache.delete(key);queueWidePersistence(key,null,true,false);
+    window.dispatchEvent(new CustomEvent('rodrigol:data-changed',{detail:{key,value:null,source:'remote-ws'}}));
+    return;
+  }
+  const before=JSON.stringify(wideDataCache.get(key));
+  const after=JSON.stringify(envelope.value);
+  wideDataCache.set(key,envelope.value);queueWidePersistence(key,envelope.value,false,false);
+  if(before!==after)window.dispatchEvent(new CustomEvent('rodrigol:data-changed',{detail:{key,value:envelope.value,source:'remote-ws'}}));
+}
+function startRemoteDataSocket(){
+  const cfg=runtimeForDataSync();if(!cfg.remoteStorageEnabled)return;
+  remoteDataSocket=createManagedSocket({
+    onMessage:event=>{try{applyRemoteDataEnvelope(JSON.parse(event.data));}catch{}},
+    onStatus:detail=>window.dispatchEvent(new CustomEvent('rodrigol:remote-data-status',{detail}))
+  });
+}
+startRemoteDataSocket();
+// WebSocket é o caminho principal. Polling permanece apenas como rede de segurança.
+setInterval(pollRemoteData,60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollRemoteData();});
 async function loadClubCrests(){if(!assetDb)return;await new Promise((resolve,reject)=>{const tx=assetDb.transaction(CLUB_ASSET_STORE,'readonly'),store=tx.objectStore(CLUB_ASSET_STORE),req=store.openCursor();req.onsuccess=()=>{const cursor=req.result;if(cursor){clubCrestCache.set(String(cursor.key),cursor.value||'');cursor.continue();}else resolve();};req.onerror=()=>reject(req.error);});}
 async function setClubCrest(id,value){await putAssetLocal(CLUB_ASSET_STORE,id,value||'');queueRemoteAsset('club',id,value||'');}
 async function deleteClubCrest(id){await putAssetLocal(CLUB_ASSET_STORE,id,'');queueRemoteAsset('club',id,'');}

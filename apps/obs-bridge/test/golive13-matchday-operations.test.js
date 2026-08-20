@@ -13,7 +13,7 @@ test('Go-Live 1.3 Cabine não grava ao apenas selecionar tipo de evento', async(
 
 test('Go-Live 1.3 publica evento sem bloquear a Cabine esperando rede', async()=>{
   const code=await read('public/control.js');
-  assert.match(code,/Promise\.allSettled\(\[publishScoreboard\(\),publishStudioSnapshot\(\)\]\)/);
+  assert.match(code,/Promise\.allSettled\(\[publishScoreboard\(\),publishStudio(?:Snapshot|LiveUpdate)\(\)\]\)/);
   assert.match(code,/function renderEventFast\(\)/);
 });
 

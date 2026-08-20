@@ -47,6 +47,7 @@ let backupTimer=null;
 const AUTO_BACKUP_DELAY_MS=10000;
 const MAX_AUTOMATIC_BACKUPS=20;
 const regionState=new Map();
+const publicEventClients=new Set();
 const types={".html":"text/html; charset=utf-8",".css":"text/css; charset=utf-8",".js":"text/javascript; charset=utf-8",".json":"application/json; charset=utf-8",".svg":"image/svg+xml; charset=utf-8"};
 
 
@@ -444,9 +445,14 @@ async function loadPersistentData(){
 }
 async function persistData(){await mkdir(dataRoot,{recursive:true});const temp=`${dataFile}.tmp`;const envelope=persistentEnvelope("runtime");await writeFile(temp,JSON.stringify(envelope,null,2),"utf8");await rename(temp,dataFile);lastDataSavedAt=envelope.updatedAt;}
 function queuePersistData(){dataWriteQueue=dataWriteQueue.then(persistData).then(()=>{scheduleAutomaticBackup();}).catch(error=>console.error("Falha ao persistir dados:",error));return dataWriteQueue;}
+function notifyPublicEvent(kind="data",detail={}){
+  const payload=`data: ${JSON.stringify({kind,revision:dataRevision,sequence,...detail,at:new Date().toISOString()})}\n\n`;
+  for(const response of [...publicEventClients]){try{response.write(payload);}catch{publicEventClients.delete(response);}}
+}
 function broadcastDataChange(key,value,deleted=false,source="api"){
   const envelope={type:"data-change",revision:dataRevision,key,value:deleted?null:value,deleted,source,sentAt:new Date().toISOString()};
   for(const socket of clients)send(socket,envelope);
+  notifyPublicEvent("data",{key});
   return envelope;
 }
 await loadPersistentData();
@@ -490,7 +496,7 @@ function applyToState(command){
 function stateSnapshot(){return Object.fromEntries(regionState.entries());}
 const legacyRegionAliases={ticker:"legacy-disabled","side-alert":"legacy-disabled","lower-third":"studio-lower-third",headline:"studio-headline",fullscreen:"studio-fullscreen"};
 function normalizeCommand(command){const mapped=legacyRegionAliases[command?.region];if(!mapped)return command;return {...command,region:mapped,meta:{...(command.meta||{}),legacyRegion:command.region}};}
-function broadcast(command,source="api"){command=normalizeCommand(command);applyToState(command);const envelope={type:"command",sequence:++sequence,source,sentAt:new Date().toISOString(),command};lastCommand=envelope;commandCount+=1;lastPublicationAt=envelope.sentAt;for(const socket of clients)send(socket,envelope);return envelope;}
+function broadcast(command,source="api"){command=normalizeCommand(command);applyToState(command);const envelope={type:"command",sequence:++sequence,source,sentAt:new Date().toISOString(),command};lastCommand=envelope;commandCount+=1;lastPublicationAt=envelope.sentAt;for(const socket of clients)send(socket,envelope);notifyPublicEvent("command",{region:command.region});return envelope;}
 function validCommand(value){if(!value||typeof value!=="object"||typeof value.type!=="string")return false;if(value.type==="clear-all")return true;return typeof value.region==="string"&&["show","update","hide","clear"].includes(value.type);}
 function safeEqual(a='',b=''){const left=Buffer.from(String(a)),right=Buffer.from(String(b));return left.length===right.length&&timingSafeEqual(left,right);}
 function cookies(request){const out={};for(const part of String(request.headers.cookie||'').split(';')){const index=part.indexOf('=');if(index<0)continue;out[part.slice(0,index).trim()]=decodeURIComponent(part.slice(index+1).trim());}return out;}
@@ -539,6 +545,13 @@ const server=createServer(async(request,response)=>{
   if(pathname==="/api/state"){if(!requireAuth(request,response))return;json(response,200,{connections:clients.size,sequence,lastCommand,regions:stateSnapshot()});return;}
   if(pathname==="/api/network"){json(response,200,{environment,hostname:os.hostname(),platform:process.platform,node:process.version,host,port,connections:clients.size,reconnects,allowedOrigin,tokenRequired:Boolean(apiToken),loginRequired:Boolean(adminPassword),remoteAccess:remoteHost,secureCookies,overlayRoot:process.env.RODRIGOL_OVERLAY_ROOT||"studio",dataRoot});return;}
   if(pathname==="/api/runtime-config"){json(response,200,{environment,bridgeHttp:process.env.RODRIGOL_PUBLIC_URL||null,bridgeWs:process.env.RODRIGOL_PUBLIC_WS||null,overlayUrl:process.env.RODRIGOL_OVERLAY_URL||null,tokenRequired:Boolean(apiToken),loginRequired:Boolean(adminPassword),remoteAccess:remoteHost});return;}
+  if(pathname==="/api/public/events"&&request.method==="GET"){
+    response.writeHead(200,{"Content-Type":"text/event-stream; charset=utf-8","Cache-Control":"no-cache, no-transform","Connection":"keep-alive","Access-Control-Allow-Origin":allowedOrigin});
+    response.write(`data: ${JSON.stringify({kind:"ready",revision:dataRevision,sequence,at:new Date().toISOString()})}\n\n`);
+    publicEventClients.add(response);
+    request.on("close",()=>publicEventClients.delete(response));
+    return;
+  }
   if(pathname==="/api/public/home"&&request.method==="GET"){json(response,200,publicHome(url.searchParams.get("date")));return;}
   if(pathname==="/api/public/matches"&&request.method==="GET"){const date=publicDate(url.searchParams.get("date"));json(response,200,{ok:true,date,generatedAt:new Date().toISOString(),matches:publicMatchesForDate(date)});return;}
   if(pathname.startsWith("/api/public/matches/")&&request.method==="GET"){
@@ -607,7 +620,7 @@ server.on("upgrade",(request,socket)=>{
   socket.on("data",buffer=>{if((buffer[0]&0x0f)===0x8){clients.delete(socket);socket.end();}});
 });
 
-const heartbeat=setInterval(()=>{for(const socket of clients){if(socket.destroyed)clients.delete(socket);else socket.write(framePing());}},15000);heartbeat.unref();
+const heartbeat=setInterval(()=>{for(const socket of clients){if(socket.destroyed)clients.delete(socket);else socket.write(framePing());}for(const response of [...publicEventClients]){try{response.write(": keepalive\n\n");}catch{publicEventClients.delete(response);}}},15000);heartbeat.unref();
 server.listen(port,host,()=>{console.log("");console.log("RodriGol OBS Bridge iniciado com sucesso.");console.log(`Overlay Studio/OBS: http://${host}:${port}`);
 console.log(`Overlay legado:     http://${host}:${port}/legacy/`);console.log(`Controle:    http://${host}:${port}/control/`);console.log(`WebSocket:   ws://${host}:${port}/ws`);console.log(`Diagnóstico: http://${host}:${port}/health`);
 console.log(`Acesso remoto: ${remoteHost?"ATIVO":"LOCAL"}${adminPassword?" · login protegido":""}`);

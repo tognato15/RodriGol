@@ -23,7 +23,7 @@ import {
   shouldShowClock
 } from './match-presentation.js';
 import { finishMatch, migrateMatchLifecycle, syncMatchFromCoverage, transitionMatch } from './match-lifecycle.js';
-import { publishStudioSnapshot } from './studio-regions.js';
+import { publishStudioSnapshot, publishStudioLiveUpdate, scheduleStudioSnapshot } from './studio-regions.js';
 import { lookupCurrentWeather } from './weather-service.js';
 
 import { applySubstitution, normalizeOperationalLineups, rebuildOperationalLineups, substitutionOptions, substitutionText } from './substitution-engine.js';
@@ -247,9 +247,18 @@ function scoreboardPayload() {
     lineups: state.lineups
   };
 }
+let scoreboardFullPublished=false;
+function scoreboardDynamicPayload(){
+  const payload=scoreboardPayload();
+  const dynamic={...payload};
+  for(const key of ['homeCrest','awayCrest','homeName','awayName','homeShort','awayShort','competition','venue'])delete dynamic[key];
+  return dynamic;
+}
 async function publishScoreboard(force = false) {
   if (!force && !isMatchOnAir(match.id)) return;
-  await command({ type: 'show', region: 'scoreboard', payload: scoreboardPayload() });
+  const full=force||!scoreboardFullPublished;
+  await command({ type: full?'show':'update', region: 'scoreboard', payload: full?scoreboardPayload():scoreboardDynamicPayload() });
+  scoreboardFullPublished=true;
 }
 function renderCrest(element, club) {
   element.style.background = club.primaryColor || '#18394a';
@@ -602,8 +611,9 @@ async function publishEvent() {
   try {
     const event = makeEvent();
     if (editingEventId) { const index = state.events.findIndex(item => item.id === editingEventId); if (index >= 0) { event.id = editingEventId; state.events[index] = event; rebuildFromEvents(); } editingEventId = null; $('publishEvent').textContent = '⚡ REGISTRAR & PUBLICAR'; } else { applyEvent(event); }
-    saveState(); archiveCurrentCoverage('Timeline atualizada'); renderEventFast();
-    Promise.allSettled([publishScoreboard(),publishStudioSnapshot()]).then(results=>{for(const result of results)if(result.status==='rejected')log(result.reason?.message||String(result.reason));});
+    saveState(); renderEventFast();
+    Promise.allSettled([publishScoreboard(),publishStudioLiveUpdate()]).then(results=>{for(const result of results)if(result.status==='rejected')log(result.reason?.message||String(result.reason));});
+    scheduleStudioSnapshot(2500);
     const title = event.type === 'GOAL' ? `GOL DO ${teamName(event.team).toUpperCase()}!` : event.label;
     const scoreText = `${home.shortName} ${state.homeScore} x ${state.awayScore} ${away.shortName}`;
     const text = event.type === 'GOAL' ? [title, event.player, scoreText].filter(Boolean).join(' — ') : [title, event.player, event.details].filter(Boolean).join(' — ');
@@ -684,8 +694,8 @@ window.addEventListener('rodrigol:data-changed', event => {
   else if (key === 'rodrigol-on-air-match-v1' || key === 'rodrigol-matches-v1') render();
 });
 window.addEventListener('beforeunload', () => { if (state.clockRunning) saveState(); });
-setInterval(() => { $('now').textContent = new Date().toLocaleTimeString('pt-BR'); if(!document.hidden)renderOtherMatches(); }, 4000);
-setInterval(() => { if(!document.hidden)health(); }, 5000);
+setInterval(() => { $('now').textContent = new Date().toLocaleTimeString('pt-BR'); if(!document.hidden)renderOtherMatches(); }, 15000);
+setInterval(() => { if(!document.hidden)health(); }, 30000);
 health();
 try {
   render();

@@ -68,13 +68,35 @@ function isToday(match){const d=String(match.date||'');const now=new Date(),key=
 function summaryMatches(all,selected,settings){const selectedIds=new Set(selected.map(m=>m.id));const selectedRounds=new Set(selected.map(m=>String(m.roundId||'')).filter(Boolean));const explicitRound=String(settings.yellowTickerRoundId||'');let source=all;if(settings.yellowTickerScope==='SELECTED')source=all.filter(m=>selectedIds.has(m.id));else if(settings.yellowTickerScope==='ROUND')source=all.filter(m=>explicitRound?String(m.roundId||'')===explicitRound:selectedRounds.has(String(m.roundId||'')));else if(settings.yellowTickerScope==='BOTH')source=all.filter(m=>isToday(m)||(explicitRound?String(m.roundId||'')===explicitRound:selectedRounds.has(String(m.roundId||''))));else source=all.filter(isToday);return source.filter(m=>{const v=deriveVisualState(m,state(m));if(v.beforeKickoff)return settings.yellowTickerIncludeScheduled!==false;if(v.isFinal)return settings.yellowTickerIncludeFinal!==false;return settings.yellowTickerIncludeLive!==false;});}
 const AUTO_SCOREBOARD_PHASES=new Set(['FIRST_HALF','LIVE_UNKNOWN','HALFTIME','SECOND_HALF','EXTRA_TIME','PENALTIES']);
 function automaticScoreboardMatches(matches=[]){return matches.filter(match=>AUTO_SCOREBOARD_PHASES.has(deriveVisualState(match,state(match)).phase)).sort((a,b)=>String(a.startedAt||a.date||'').localeCompare(String(b.startedAt||b.date||''))||String(a.time||'').localeCompare(String(b.time||'')));}
-export async function publishStudioSnapshot(){const matches=getMatches(),byId=new Map(matches.map(m=>[m.id,m])),selected=getActiveScoreboardMatchIds().map(id=>byId.get(id)).filter(Boolean),round=automaticScoreboardMatches(matches).map(studioMatchPayload),all=matches.map(studioMatchPayload),settings=getOverlayControlState(),summary=summaryMatches(matches,selected,settings).map(studioMatchPayload).map(i=>({...i,mode:settings.yellowTickerMode==='POP'?'POP':'MARQUEE',speedSeconds:Math.min(120,Math.max(15,Number(settings.yellowTickerSpeed)||60))}));
+let deferredSnapshotTimer=null;
+function buildStudioCollections(){
+  const matches=getMatches(),byId=new Map(matches.map(m=>[m.id,m]));
+  const selected=getActiveScoreboardMatchIds().map(id=>byId.get(id)).filter(Boolean);
+  const round=automaticScoreboardMatches(matches).map(studioMatchPayload);
+  return {matches,selected,round};
+}
+export async function publishStudioLiveUpdate(){
+  const {matches,round}=buildStudioCollections();
+  await Promise.all([
+    command({type:'show',region:'round-scoreboard',payload:round}),
+    command({type:'show',region:'live-events',payload:eventsPayload(matches)})
+  ]);
+}
+export function scheduleStudioSnapshot(delayMs=2500){
+  clearTimeout(deferredSnapshotTimer);
+  deferredSnapshotTimer=setTimeout(()=>{publishStudioSnapshot().catch(error=>console.warn('Studio snapshot adiado falhou.',error));},Math.max(500,Number(delayMs)||2500));
+}
+export async function publishStudioSnapshot(){
+  const {matches,selected,round}=buildStudioCollections();
+  const all=matches.map(studioMatchPayload),settings=getOverlayControlState(),summary=summaryMatches(matches,selected,settings).map(studioMatchPayload).map(i=>({...i,mode:settings.yellowTickerMode==='POP'?'POP':'MARQUEE',speedSeconds:Math.min(120,Math.max(15,Number(settings.yellowTickerSpeed)||60))}));
   await Promise.all([
     command({type:'show',region:'round-scoreboard',payload:round}),
     command({type:'show',region:'live-events',payload:eventsPayload(matches)}),
     command({type:'show',region:'round-summary',payload:summary}),
     command({type:'show',region:'studio-sidebar',payload:sidebarPayload(all)})
   ]);
+  // A API pública já lê partidas/cobertura da base central. Esta região fica como fallback
+  // de compatibilidade e é atualizada apenas nos snapshots completos, não a cada lance.
   try{await command({type:'show',region:'public-match-data',payload:all});}
   catch(error){console.warn('Portal público: public-match-data não pôde ser atualizado neste ciclo.',error);}
 }
