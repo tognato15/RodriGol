@@ -12,6 +12,9 @@ let wideDataDb = null;
 let remoteDataRevision = 0;
 const clientInstanceId = crypto.randomUUID?.() || `client-${Date.now()}-${Math.random()}`;
 const pendingWideWrites = new Map();
+const remoteRetryQueue = new Map();
+let remoteRetryTimer = null;
+let remoteConflictDetected = false;
 
 const seedClubs = [
   { id: 'palmeiras', name: 'Palmeiras', shortName: 'Palmeiras', abbreviation: 'PAL', city: 'São Paulo', state: 'SP', country: 'Brasil', stadium: 'Allianz Parque', founded: '1914-08-26', primaryColor: '#1f6f43', secondaryColor: '#ffffff', tertiaryColor: '#0d3b24', crestText: 'P', crestDataUrl: '' },
@@ -80,6 +83,21 @@ function runtimeForDataSync(){
 
 function bridgeBaseForData(){ const cfg=runtimeForDataSync(); return String(cfg.bridgeHttp || location.origin).replace(/\/$/,''); }
 function authHeadersForData(extra={}){ const token=String(runtimeForDataSync().apiToken||'').trim(); return token?{...extra,Authorization:`Bearer ${token}`}:{...extra}; }
+
+function queueRemoteRetry(key, value, deleted=false){
+  remoteRetryQueue.set(key,{key,value,deleted,attempts:(remoteRetryQueue.get(key)?.attempts||0)+1});
+  if(remoteRetryTimer)return;
+  remoteRetryTimer=setTimeout(flushRemoteRetries,2000);
+}
+async function flushRemoteRetries(){
+  remoteRetryTimer=null;
+  const cfg=runtimeForDataSync();if(!cfg.remoteStorageEnabled||!remoteRetryQueue.size)return;
+  for(const [key,item] of [...remoteRetryQueue]){
+    try{const response=await fetch(`${bridgeBaseForData()}/api/data/${encodeURIComponent(key)}`,{method:item.deleted?'DELETE':'PUT',credentials:'include',headers:authHeadersForData({'Content-Type':'application/json'}),body:item.deleted?undefined:JSON.stringify({value:item.value,source:clientInstanceId})});if(!response.ok)throw new Error(`Servidor respondeu ${response.status}`);const result=await response.json();remoteDataRevision=Math.max(remoteDataRevision,Number(result.revision)||0);remoteRetryQueue.delete(key);}
+    catch(error){item.attempts+=1;remoteRetryQueue.set(key,item);window.dispatchEvent(new CustomEvent('rodrigol:remote-storage-error',{detail:{key,error:error.message,retrying:true,attempts:item.attempts}}));}
+  }
+  if(remoteRetryQueue.size)remoteRetryTimer=setTimeout(flushRemoteRetries,Math.min(15000,2000+remoteRetryQueue.size*500));
+}
 function queueWidePersistence(key, value, deleted=false, syncRemote=true){
   if (!wideDataDb) return;
   const operation = new Promise((resolve,reject)=>{
@@ -96,8 +114,8 @@ function queueWidePersistence(key, value, deleted=false, syncRemote=true){
       method:deleted?'DELETE':'PUT',credentials:'include',headers:authHeadersForData({'Content-Type':'application/json'}),
       body:deleted?undefined:JSON.stringify({value,source:clientInstanceId})
     }).then(r=>{if(!r.ok)throw new Error(`Servidor respondeu ${r.status}`);return r.json();})
-      .then(result=>{remoteDataRevision=Math.max(remoteDataRevision,Number(result.revision)||0);})
-      .catch(error=>window.dispatchEvent(new CustomEvent('rodrigol:remote-storage-error',{detail:{key,error:error.message}})));
+      .then(result=>{remoteDataRevision=Math.max(remoteDataRevision,Number(result.revision)||0);remoteRetryQueue.delete(key);})
+      .catch(error=>{queueRemoteRetry(key,value,deleted);window.dispatchEvent(new CustomEvent('rodrigol:remote-storage-error',{detail:{key,error:error.message,retrying:true}}));});
   }
 }
 function write(key, value) {
@@ -177,6 +195,14 @@ async function loadWideData(){
 async function reconcileRemoteSnapshot(snapshot={}){
   const records=snapshot.records||{};
   const remoteKeys=new Set(Object.keys(records).filter(key=>isWideDataKey(key)));
+  const localKeys=[...wideDataCache.keys()].filter(key=>isWideDataKey(key));
+  if(!remoteConflictDetected&&remoteKeys.size<=2&&localKeys.length>=10){
+    remoteConflictDetected=true;
+    const detail={type:'sparse-remote',remoteRecords:remoteKeys.size,localRecords:localKeys.length,revision:Number(snapshot.revision)||0,message:'A base central está vazia ou muito menor que a base local. A sincronização destrutiva foi bloqueada.'};
+    window.dispatchEvent(new CustomEvent('rodrigol:remote-storage-conflict',{detail}));
+    console.error('[RodriGol] Sincronização bloqueada por segurança:',detail);
+    return false;
+  }
   for(const key of [...wideDataCache.keys()]){
     if(remoteKeys.has(key))continue;
     wideDataCache.delete(key);
@@ -192,6 +218,7 @@ async function reconcileRemoteSnapshot(snapshot={}){
     queueWidePersistence(key,value,false,false);
     if(before!==after)window.dispatchEvent(new CustomEvent('rodrigol:data-changed',{detail:{key,value,source:'remote'}}));
   }
+  return true;
 }
 async function hydrateRemoteData(){
   const cfg=runtimeForDataSync(); if(!cfg.remoteStorageEnabled)return;

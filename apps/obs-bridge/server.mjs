@@ -1,7 +1,7 @@
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import os from "node:os";
 import { createServer } from "node:http";
-import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rename, stat, unlink, writeFile } from "node:fs/promises";
 import { extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -14,6 +14,7 @@ const legacyRoot=fileURLToPath(new URL("../overlay/dist/",import.meta.url));
 const defaultDataRoot=fileURLToPath(new URL("./data/",import.meta.url));
 const dataRoot=process.env.RODRIGOL_DATA_DIR?resolve(process.env.RODRIGOL_DATA_DIR):defaultDataRoot;
 const dataFile=join(dataRoot,"rodrigol-store.json");
+const backupRoot=join(dataRoot,"backups");
 const overlayRoot=process.env.RODRIGOL_OVERLAY_ROOT==="legacy"?legacyRoot:studioRoot;
 const port=Number(process.env.PORT??4173);
 const host=process.env.HOST??(process.env.RAILWAY_ENVIRONMENT?"0.0.0.0":"127.0.0.1");
@@ -24,7 +25,7 @@ const adminPassword=String(process.env.RODRIGOL_ADMIN_PASSWORD??"");
 const sessionTtlHours=Math.max(1,Number(process.env.RODRIGOL_SESSION_TTL_HOURS)||12);
 const secureCookies=String(process.env.RODRIGOL_SECURE_COOKIES??(environment==="production"?"true":"false")).toLowerCase()==="true";
 const allowInsecureRemote=String(process.env.RODRIGOL_ALLOW_INSECURE_REMOTE??"false").toLowerCase()==="true";
-const sessions=new Map();
+const sessionSecret=createHash("sha256").update(`rodrigol-session:${adminPassword||apiToken||"local"}`).digest();
 const remoteHost=!["127.0.0.1","localhost","::1"].includes(host);
 if(remoteHost&&!adminPassword&&!allowInsecureRemote){
   throw new Error("Acesso remoto bloqueado: defina RODRIGOL_ADMIN_PASSWORD antes de usar HOST diferente de 127.0.0.1.");
@@ -40,6 +41,11 @@ const remoteStorage=new Map();
 const persistentData=new Map();
 let dataRevision=0;
 let dataWriteQueue=Promise.resolve();
+let lastDataSavedAt=null;
+let lastBackupAt=null;
+let backupTimer=null;
+const AUTO_BACKUP_DELAY_MS=10000;
+const MAX_AUTOMATIC_BACKUPS=20;
 const regionState=new Map();
 const types={".html":"text/html; charset=utf-8",".css":"text/css; charset=utf-8",".js":"text/javascript; charset=utf-8",".json":"application/json; charset=utf-8",".svg":"image/svg+xml; charset=utf-8"};
 
@@ -420,21 +426,18 @@ function publicHome(date){
 }
 
 
+function persistentEnvelope(reason="runtime"){return {version:2,revision:dataRevision,updatedAt:new Date().toISOString(),reason,recordCount:persistentData.size,records:Object.fromEntries(persistentData)};}
+async function listBackupFiles(){try{return (await readdir(backupRoot)).filter(name=>name.endsWith(".json")).sort().reverse();}catch{return[];}}
+async function pruneBackups(){const files=await listBackupFiles();for(const name of files.slice(MAX_AUTOMATIC_BACKUPS))await unlink(join(backupRoot,name)).catch(()=>{});}
+async function backupCurrentData(reason="automatic"){if(!persistentData.size)return null;await mkdir(backupRoot,{recursive:true});const stamp=new Date().toISOString().replace(/[:.]/g,"-");const file=join(backupRoot,`rodrigol-store-${stamp}-${reason}.json`);await writeFile(file,JSON.stringify(persistentEnvelope(reason),null,2),"utf8");lastBackupAt=new Date().toISOString();await pruneBackups();return file;}
+function scheduleAutomaticBackup(){if(backupTimer)return;backupTimer=setTimeout(()=>{backupTimer=null;dataWriteQueue=dataWriteQueue.then(()=>backupCurrentData("automatic")).catch(error=>console.error("Falha no backup automático:",error));},AUTO_BACKUP_DELAY_MS);backupTimer.unref?.();}
 async function loadPersistentData(){
-  try{
-    const parsed=JSON.parse(await readFile(dataFile,"utf8"));
-    dataRevision=Number(parsed.revision)||0;
-    for(const [key,value] of Object.entries(parsed.records||{}))persistentData.set(key,value);
-  }catch(error){if(error?.code!=="ENOENT")console.error("Falha ao carregar dados persistentes:",error);}
+  try{const parsed=JSON.parse(await readFile(dataFile,"utf8"));dataRevision=Number(parsed.revision)||0;lastDataSavedAt=parsed.updatedAt||null;for(const [key,value] of Object.entries(parsed.records||{}))persistentData.set(key,value);return;}
+  catch(error){if(error?.code==="ENOENT")return;console.error("Falha ao carregar dados persistentes; tentando backup automático:",error);}
+  for(const name of await listBackupFiles()){try{const parsed=JSON.parse(await readFile(join(backupRoot,name),"utf8"));persistentData.clear();dataRevision=Number(parsed.revision)||0;lastDataSavedAt=parsed.updatedAt||null;for(const [key,value] of Object.entries(parsed.records||{}))persistentData.set(key,value);console.warn(`Base recuperada automaticamente do backup ${name}.`);await persistData();return;}catch{}}
 }
-async function persistData(){
-  await mkdir(dataRoot,{recursive:true});
-  const temp=`${dataFile}.tmp`;
-  const body=JSON.stringify({version:1,revision:dataRevision,updatedAt:new Date().toISOString(),records:Object.fromEntries(persistentData)},null,2);
-  await writeFile(temp,body,"utf8");
-  await rename(temp,dataFile);
-}
-function queuePersistData(){dataWriteQueue=dataWriteQueue.then(persistData).catch(error=>console.error("Falha ao persistir dados:",error));return dataWriteQueue;}
+async function persistData(){await mkdir(dataRoot,{recursive:true});const temp=`${dataFile}.tmp`;const envelope=persistentEnvelope("runtime");await writeFile(temp,JSON.stringify(envelope,null,2),"utf8");await rename(temp,dataFile);lastDataSavedAt=envelope.updatedAt;}
+function queuePersistData(){dataWriteQueue=dataWriteQueue.then(persistData).then(()=>{scheduleAutomaticBackup();}).catch(error=>console.error("Falha ao persistir dados:",error));return dataWriteQueue;}
 function broadcastDataChange(key,value,deleted=false,source="api"){
   const envelope={type:"data-change",revision:dataRevision,key,value:deleted?null:value,deleted,source,sentAt:new Date().toISOString()};
   for(const socket of clients)send(socket,envelope);
@@ -485,15 +488,9 @@ function broadcast(command,source="api"){command=normalizeCommand(command);apply
 function validCommand(value){if(!value||typeof value!=="object"||typeof value.type!=="string")return false;if(value.type==="clear-all")return true;return typeof value.region==="string"&&["show","update","hide","clear"].includes(value.type);}
 function safeEqual(a='',b=''){const left=Buffer.from(String(a)),right=Buffer.from(String(b));return left.length===right.length&&timingSafeEqual(left,right);}
 function cookies(request){const out={};for(const part of String(request.headers.cookie||'').split(';')){const index=part.indexOf('=');if(index<0)continue;out[part.slice(0,index).trim()]=decodeURIComponent(part.slice(index+1).trim());}return out;}
-function sessionFor(request){
-  if(!adminPassword)return {local:true};
-  const token=cookies(request).rodrigol_session;
-  if(!token)return null;
-  const session=sessions.get(token);
-  if(!session||session.expiresAt<=Date.now()){if(token)sessions.delete(token);return null;}
-  session.expiresAt=Date.now()+sessionTtlHours*3600000;
-  return session;
-}
+function signSessionPayload(payload){return createHmac("sha256",sessionSecret).update(payload).digest("base64url");}
+function createSessionToken(){const payload=Buffer.from(JSON.stringify({iat:Date.now(),exp:Date.now()+sessionTtlHours*3600000,nonce:randomBytes(12).toString("hex")})).toString("base64url");return `${payload}.${signSessionPayload(payload)}`;}
+function sessionFor(request){if(!adminPassword)return {local:true,expiresAt:Infinity};const token=cookies(request).rodrigol_session;if(!token)return null;const [payload,signature]=String(token).split('.');if(!payload||!signature)return null;const expected=signSessionPayload(payload);const a=Buffer.from(signature),b=Buffer.from(expected);if(a.length!==b.length||!timingSafeEqual(a,b))return null;try{const decoded=JSON.parse(Buffer.from(payload,"base64url").toString("utf8"));if(Number(decoded.exp)<=Date.now())return null;return {createdAt:Number(decoded.iat)||0,expiresAt:Number(decoded.exp)||0};}catch{return null;}}
 function bearerAuthorized(request){if(!apiToken)return false;const header=String(request.headers.authorization||"");return safeEqual(header,`Bearer ${apiToken}`);}
 function authorized(request){return !apiToken&&!adminPassword?true:Boolean(bearerAuthorized(request)||sessionFor(request));}
 function requireAuth(request,response){if(authorized(request))return true;json(response,401,{ok:false,error:"Autenticação obrigatória."});return false;}
@@ -521,18 +518,18 @@ const server=createServer(async(request,response)=>{
   if(pathname==="/login"&&request.method==="POST"){
     const form=formBody(await readBody(request)),next=String(form.next||"/control/");
     if(adminPassword&&safeEqual(form.password||"",adminPassword)){
-      const token=randomBytes(32).toString("hex");sessions.set(token,{createdAt:Date.now(),expiresAt:Date.now()+sessionTtlHours*3600000});
+      const token=createSessionToken();
       setSessionCookie(response,token);redirect(response,next.startsWith("/control")?next:"/control/");return;
     }
     const body=loginPage(next,"Senha incorreta.");response.writeHead(401,{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store"});response.end(body);return;
   }
   if(pathname==="/logout"){
-    const token=cookies(request).rodrigol_session;if(token)sessions.delete(token);clearSessionCookie(response);redirect(response,"/login");return;
+    clearSessionCookie(response);redirect(response,"/login");return;
   }
   if(pathname==="/api/session"){
     const session=sessionFor(request);json(response,200,{authenticated:Boolean(session),loginRequired:Boolean(adminPassword),environment,expiresAt:session?.expiresAt||null});return;
   }
-  if(pathname==="/health"){json(response,200,{status:"ok",app:"@rodrigol/obs-bridge",version:bridgeVersion,environment,overlay:"@rodrigol/overlay-studio",connections:clients.size,sequence,uptimeSeconds:Math.floor((Date.now()-startedAt)/1000),commandCount,lastPublicationAt,remoteAccess:remoteHost,loginRequired:Boolean(adminPassword),memory:process.memoryUsage()});return;}
+  if(pathname==="/health"){json(response,200,{status:"ok",app:"@rodrigol/obs-bridge",version:bridgeVersion,environment,overlay:"@rodrigol/overlay-studio",connections:clients.size,sequence,uptimeSeconds:Math.floor((Date.now()-startedAt)/1000),commandCount,lastPublicationAt,remoteAccess:remoteHost,loginRequired:Boolean(adminPassword),data:{revision:dataRevision,records:persistentData.size,lastSavedAt:lastDataSavedAt,lastBackupAt},memory:process.memoryUsage()});return;}
   if(pathname==="/api/state"){if(!requireAuth(request,response))return;json(response,200,{connections:clients.size,sequence,lastCommand,regions:stateSnapshot()});return;}
   if(pathname==="/api/network"){json(response,200,{environment,hostname:os.hostname(),platform:process.platform,node:process.version,host,port,connections:clients.size,reconnects,allowedOrigin,tokenRequired:Boolean(apiToken),loginRequired:Boolean(adminPassword),remoteAccess:remoteHost,secureCookies,overlayRoot:process.env.RODRIGOL_OVERLAY_ROOT||"studio",dataRoot});return;}
   if(pathname==="/api/runtime-config"){json(response,200,{environment,bridgeHttp:process.env.RODRIGOL_PUBLIC_URL||null,bridgeWs:process.env.RODRIGOL_PUBLIC_WS||null,overlayUrl:process.env.RODRIGOL_OVERLAY_URL||null,tokenRequired:Boolean(apiToken),loginRequired:Boolean(adminPassword),remoteAccess:remoteHost});return;}
@@ -548,12 +545,14 @@ const server=createServer(async(request,response)=>{
   }
   if(pathname==="/api/public/standings"&&request.method==="GET"){json(response,200,{ok:true,generatedAt:new Date().toISOString(),standings:publicStandings()});return;}
   if(pathname==="/api/public/news"&&request.method==="GET"){json(response,200,{ok:true,generatedAt:new Date().toISOString(),news:publicNews()});return;}
+  if(pathname==="/api/data/status"&&request.method==="GET"){if(!requireAuth(request,response))return;const backups=await listBackupFiles();json(response,200,{ok:true,environment,dataRoot,revision:dataRevision,records:persistentData.size,lastSavedAt:lastDataSavedAt,lastBackupAt,automaticBackups:backups.length});return;}
   if(pathname==="/api/data/import-backup"&&request.method==="POST"){
     if(!requireAuth(request,response))return;
     try{
       const backup=JSON.parse(await readBody(request));
       if(backup?.format!=="rodrigol-backup")throw new Error("Backup RodriGol inválido.");
       const imported=backupRecords(backup);
+      if(persistentData.size)await backupCurrentData("before-import");
       persistentData.clear();
       for(const [key,value] of imported)persistentData.set(key,value);
       dataRevision+=1;
