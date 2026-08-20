@@ -480,7 +480,9 @@ function json(response,status,body){response.writeHead(status,{"Content-Type":"a
 function redirect(response,location){response.writeHead(308,{Location:location,"Cache-Control":"no-store"});response.end();}
 function frameText(text){const payload=Buffer.from(text);if(payload.length<126)return Buffer.concat([Buffer.from([0x81,payload.length]),payload]);if(payload.length<65536){const head=Buffer.alloc(4);head[0]=0x81;head[1]=126;head.writeUInt16BE(payload.length,2);return Buffer.concat([head,payload]);}const head=Buffer.alloc(10);head[0]=0x81;head[1]=127;head.writeBigUInt64BE(BigInt(payload.length),2);return Buffer.concat([head,payload]);}
 function framePing(){return Buffer.from([0x89,0x00]);}
-function send(socket,message){if(!socket.destroyed)socket.write(frameText(JSON.stringify(message)));}
+function prepareSocketMessage(message){return frameText(JSON.stringify(message));}
+function sendPrepared(socket,frame){if(!socket.destroyed)socket.write(frame);}
+function send(socket,message){sendPrepared(socket,prepareSocketMessage(message));}
 function sanitizePayload(value){
   if(!value||typeof value!=="object"||Array.isArray(value))return value;
   const payload={...value};
@@ -515,7 +517,7 @@ function applyToState(command){
 function stateSnapshot(){return Object.fromEntries(regionState.entries());}
 const legacyRegionAliases={ticker:"legacy-disabled","side-alert":"legacy-disabled","lower-third":"studio-lower-third",headline:"studio-headline",fullscreen:"studio-fullscreen"};
 function normalizeCommand(command){const mapped=legacyRegionAliases[command?.region];if(!mapped)return command;return {...command,region:mapped,meta:{...(command.meta||{}),legacyRegion:command.region}};}
-function broadcast(command,source="api"){command=normalizeCommand(command);applyToState(command);const envelope={type:"command",sequence:++sequence,source,sentAt:new Date().toISOString(),command};lastCommand=envelope;commandCount+=1;lastPublicationAt=envelope.sentAt;for(const socket of clients)send(socket,envelope);notifyPublicEvent("command",{region:command.region});return envelope;}
+function broadcast(command,source="api"){command=normalizeCommand(command);applyToState(command);const envelope={type:"command",sequence:++sequence,source,sentAt:new Date().toISOString(),command};lastCommand=envelope;commandCount+=1;lastPublicationAt=envelope.sentAt;const frame=prepareSocketMessage(envelope);for(const socket of clients)sendPrepared(socket,frame);notifyPublicEvent("command",{region:command.region});return envelope;}
 function validCommand(value){if(!value||typeof value!=="object"||typeof value.type!=="string")return false;if(value.type==="clear-all")return true;return typeof value.region==="string"&&["show","update","hide","clear"].includes(value.type);}
 function safeEqual(a='',b=''){const left=Buffer.from(String(a)),right=Buffer.from(String(b));return left.length===right.length&&timingSafeEqual(left,right);}
 function cookies(request){const out={};for(const part of String(request.headers.cookie||'').split(';')){const index=part.indexOf('=');if(index<0)continue;out[part.slice(0,index).trim()]=decodeURIComponent(part.slice(index+1).trim());}return out;}
@@ -634,7 +636,9 @@ const server=createServer(async(request,response)=>{
       const commands=Array.isArray(body)?body:Array.isArray(body?.commands)?body.commands:[];
       if(!commands.length||commands.length>20||commands.some(command=>!validCommand(command))){json(response,400,{ok:false,error:"Lote de comandos de overlay inválido."});return;}
       const envelopes=commands.map(command=>broadcast(command,"api-batch"));
-      json(response,202,{ok:true,count:envelopes.length,envelopes,serverTimingMs:Math.round((performance.now()-started)*100)/100});
+      // ACK compacto: os payloads já foram entregues por WebSocket. Não ecoamos novamente
+      // megabytes de comandos na resposta HTTP da Cabine.
+      json(response,202,{ok:true,count:envelopes.length,sequences:envelopes.map(item=>item.sequence),serverTimingMs:Math.round((performance.now()-started)*100)/100});
     }catch(error){json(response,400,{ok:false,error:error instanceof Error?error.message:"JSON inválido"});}
     return;
   }

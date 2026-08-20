@@ -519,7 +519,7 @@ function startClock() {
   state.clockRunning = true;
   state.clockStartedAt = Date.now();
   addSystemTimelineEvent(state.phase === 'SECOND_HALF' ? 'SECOND_HALF_START' : 'MATCH_START', state.phase === 'SECOND_HALF' ? 'RECOMEÇOU' : 'COMEÇOU', '▶', phase().period);
-  saveState(); render(); updateClockButton(); ensureTickTimer(); publishScoreboard().catch(error => log(error.message)); publishStudioSnapshot().catch(error => log(error.message));
+  saveState(); render(); updateClockButton(); ensureTickTimer(); publishScoreboard().catch(error => log(error.message)); publishStudioLiveUpdate().catch(error => log(error.message)); scheduleStudioSnapshot(2500);
 }
 function renderClockTick() {
   const currentPhase = phase();
@@ -560,7 +560,7 @@ function setPhase(value) {
   if (value === 'FIRST_HALF' && effectiveElapsed() >= 45 * 60) { state.elapsedSeconds = 0; state.clockStartedAt = state.clockRunning ? Date.now() : null; }
   if (value === 'SECOND_HALF' && effectiveElapsed() < 45 * 60) { state.elapsedSeconds = 45 * 60; state.clockStartedAt = state.clockRunning ? Date.now() : null; }
   if(value==='FINAL'){const result=finishMatch(match.id,state);if(result){match=result.match;state={...state,...result.coverage};}}else{const result=transitionMatch(match.id,value,state);if(result){match=result.match;state={...state,...result.coverage};}}
-  render(); updateClockButton(); publishScoreboard().catch(error => log(error.message)); publishStudioSnapshot().catch(error => log(error.message));
+  render(); updateClockButton(); publishScoreboard().catch(error => log(error.message)); publishStudioLiveUpdate().catch(error => log(error.message)); scheduleStudioSnapshot(2500);
 }
 function makeEvent() {
   const meta = EVENT_META[state.selectedType],createdAt=new Date().toISOString(),id=crypto.randomUUID?.() || String(Date.now());
@@ -668,7 +668,7 @@ $('team').addEventListener('change',()=>{renderSubstitutionFields();renderEventP
 $('publishEvent').addEventListener('click', publishEvent);
 $('undoEvent').addEventListener('click', undoLast);
 $('setOnAir').addEventListener('click', async () => { setOnAirMatchId(match.id); render(); await publishScoreboard(true); });
-$('endCoverage').addEventListener('click', async () => { setPhase('FINAL'); archiveCurrentCoverage('Cobertura encerrada pelo operador'); await publishScoreboard(true); await publishStudioSnapshot(); });
+$('endCoverage').addEventListener('click', async () => { setPhase('FINAL'); archiveCurrentCoverage('Cobertura encerrada pelo operador'); await publishScoreboard(true); await publishStudioLiveUpdate(); scheduleStudioSnapshot(2500); });
 
 // Navegação interna: todos os caminhos visíveis levam a uma área real da tela.
 document.querySelectorAll('[data-section]').forEach(button => button.addEventListener('click', () => {
