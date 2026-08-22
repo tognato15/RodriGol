@@ -43,3 +43,5 @@ html,body{min-width:0;overflow-x:hidden}.app-shell{grid-template-columns:190px m
 .substitution-fields[hidden]{display:none!important}
 .substitution-fields select{width:100%}
 @media(max-width:850px){.substitution-fields{grid-template-columns:1fr;grid-column:1/-1}}
+
+.cabine-loading-banner{display:none;background:#0b1822;border:1px solid #193244;border-radius:7px;padding:18px;text-align:center;font-weight:900;color:#a9bbc8}.cabine-loading .cabine-loading-banner{display:block}.cabine-loading .workspace>section{visibility:hidden}.cabine-loading .rightbar{visibility:hidden}

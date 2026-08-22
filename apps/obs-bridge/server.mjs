@@ -170,10 +170,13 @@ function mergeLineupSources(...sources){
 
 function publicRegionMatch(id,baseMatch=null){
   const wanted=String(id||"");
+  // O round-scoreboard é publicado no caminho rápido de cada lance.
+  // public-match-data/round-summary são consolidações mais pesadas e podem chegar depois.
+  // Priorizar o estado live evita o Portal mostrar o evento no sumário com placar antigo.
   const collections=[
+    regionState.get("round-scoreboard")?.payload,
     regionState.get("public-match-data")?.payload,
-    regionState.get("round-summary")?.payload,
-    regionState.get("round-scoreboard")?.payload
+    regionState.get("round-summary")?.payload
   ].filter(Array.isArray);
 
   const candidates=collections.flat();

@@ -699,6 +699,7 @@ setInterval(() => { if(!document.hidden)health(); }, 30000);
 health();
 try {
   render();
+  document.body.classList.remove('cabine-loading');
   updateClockButton();
   if (state.clockRunning) ensureTickTimer();
   const takeOnAir = new URLSearchParams(location.search).get('takeOnAir') === '1';
@@ -710,6 +711,7 @@ try {
 } catch (error) {
   console.error('Falha ao iniciar a cabine:', error);
   const status = $('status');
+  document.body.classList.remove('cabine-loading');
   if (status) {
     status.textContent = 'Cabine com erro de inicialização';
     status.style.color = '#ff5d5d';

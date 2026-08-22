@@ -19,5 +19,6 @@ function render(){
 }
 window.addEventListener('storage',render);
 window.addEventListener('rodrigol:data-changed',render);
-setInterval(render,5000);
+setInterval(()=>{if(!document.hidden)render();},60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)render();});
 render();

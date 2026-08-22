@@ -7,7 +7,7 @@
 <title>RodriGol — Cabine de Cobertura</title>
 <link href="/control/control.css" rel="stylesheet"/>
 <link href="/control/admin-consolidation.css" rel="stylesheet"/><link href="/control/global-nav.css" rel="stylesheet"/><link href="/control/design-system.css" rel="stylesheet"/></head>
-<body>
+<body class="cabine-loading">
 <div aria-hidden="true" class="compat-labels">OPERAÇÃO RÁPIDA · REGISTRAR E PUBLICAR · OVERLAYS · PREVIEW</div>
 <header class="topbar">
 <div class="brand">RODRIGOL <b>STUDIO</b></div>
@@ -38,16 +38,17 @@
 <button class="tool" data-tool="publication">▤ Nova Publicação</button>
 <a href="/control/competitions.html">🏆 Editor de Competições</a></aside>
 <main class="workspace">
+<div class="cabine-loading-banner" id="cabineLoadingBanner">Carregando a partida solicitada…</div>
 <section class="match-header panel" id="matchOverview">
 <div class="team-block home">
-<div class="crest pal" id="homeCrest">P</div>
-<div><strong id="homeName">PALMEIRAS</strong><small id="homeScorers">—</small></div>
+<div class="crest" id="homeCrest">—</div>
+<div><strong id="homeName">CARREGANDO...</strong><small id="homeScorers">—</small></div>
 <b id="homeScoreText">0</b>
 </div>
 <div class="match-center">
-<div class="phase-row"><span id="matchStatusBadge">PRÉ-JOGO</span><strong id="periodLabel">PRÉ-JOGO</strong></div>
+<div class="phase-row"><span id="matchStatusBadge">CARREGANDO</span><strong id="periodLabel">—</strong></div>
 <div class="on-air-indicator" id="onAirIndicator">○ ESTA PARTIDA NÃO ESTÁ NO AR</div>
-<div class="clock" id="clockText">00:00</div>
+<div class="clock" id="clockText">--:--</div>
 <div class="clock-controls">
 <button id="startClock">▶ Iniciar</button>
 <button id="pauseClock">Ⅱ Pausar</button>
@@ -68,14 +69,14 @@
 </div>
 <div class="team-block away">
 <b id="awayScoreText">0</b>
-<div><strong id="awayName">RED BULL BRAGANTINO</strong><small id="awayScorers">—</small></div>
-<div class="crest brag" id="awayCrest">RB</div>
+<div><strong id="awayName">CARREGANDO...</strong><small id="awayScorers">—</small></div>
+<div class="crest" id="awayCrest">—</div>
 </div>
 </section>
 <section class="status-strip panel">
-<div><small>SITUAÇÃO DA COBERTURA</small><b id="coverageStatus">PRÉ-JOGO</b></div>
-<div><small>COMPETIÇÃO</small><b id="competitionText">Brasileirão Série A</b></div>
-<div><small>LOCAL</small><b id="venueText">Allianz Parque</b></div>
+<div><small>SITUAÇÃO DA COBERTURA</small><b id="coverageStatus">CARREGANDO</b></div>
+<div><small>COMPETIÇÃO</small><b id="competitionText">—</b></div>
+<div><small>LOCAL</small><b id="venueText">—</b></div>
 <div><small>SINCRONIZAÇÃO</small><b class="ok">TEMPO REAL</b></div>
 </section>
 <section class="match-facts panel" id="matchFactsPanel">
