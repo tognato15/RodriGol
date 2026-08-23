@@ -12,7 +12,8 @@ test('Go-Live 1.6.2 preserva ordem canônica dos acontecimentos',()=>{
   assert.match(server,/type==='HALFTIME'\)return 45\.5/);
 });
 test('Go-Live 1.6.2 oferece home compacta com navegação por data e filtro ao vivo',()=>{
-  assert.match(portal,/id="dateStrip"/);
+  assert.match(portal,/id="datePickerButton"/);
+  assert.match(portal,/id="calendarPopover"/);
   assert.match(portal,/id="filterLive"/);
   assert.match(portal,/portalSelectedDate/);
   assert.match(portal,/results-toolbar/);

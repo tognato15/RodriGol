@@ -35,11 +35,80 @@ export function publishCommand(body) {
   return bridgeJson('/api/commands', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 }
 
+let batchInFlight = false;
+let pendingBatch = null;
+let batchCircuitUntil = 0;
+
+function batchKey(command = {}, index = 0) {
+  const region = String(command?.region || '').trim();
+  return region ? `region:${region}` : `item:${index}:${String(command?.type || '')}`;
+}
+
+function mergeBatch(target, commands = []) {
+  for (const [index, command] of commands.entries()) {
+    if (!command) continue;
+    target.set(batchKey(command, index), command);
+  }
+}
+
+async function publishSequentially(commands = []) {
+  const envelopes = [];
+  for (const command of commands) {
+    const result = await publishCommand(command);
+    if (result?.envelope) envelopes.push(result.envelope);
+  }
+  return { ok: true, count: commands.length, envelopes, transport: 'sequential-fallback' };
+}
+
+async function sendBatchResilient(commands = []) {
+  if (Date.now() < batchCircuitUntil) return publishSequentially(commands);
+  try {
+    return await bridgeJson('/api/commands/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ commands }),
+      timeoutMs: 12000
+    });
+  } catch (error) {
+    // Chromium/HTTP2 pode abortar um lote mesmo com o Bridge saudável. Evitamos
+    // tempestades de retry: abrimos o circuito do batch e preservamos a operação
+    // enviando os comandos individualmente, em série, pela conexão normal.
+    if (error instanceof BridgeRequestError && error.status === 0) {
+      batchCircuitUntil = Date.now() + 120000;
+      return publishSequentially(commands);
+    }
+    throw error;
+  }
+}
+
+async function drainBatchQueue() {
+  if (batchInFlight || !pendingBatch) return;
+  const current = pendingBatch;
+  pendingBatch = null;
+  batchInFlight = true;
+  try {
+    const commands = [...current.commands.values()];
+    const result = commands.length === 1
+      ? await publishCommand(commands[0]).then(value => ({ ...value, count: 1, envelopes: value?.envelope ? [value.envelope] : [] }))
+      : await sendBatchResilient(commands);
+    current.waiters.forEach(({ resolve }) => resolve(result));
+  } catch (error) {
+    current.waiters.forEach(({ reject }) => reject(error));
+  } finally {
+    batchInFlight = false;
+    if (pendingBatch) queueMicrotask(drainBatchQueue);
+  }
+}
+
 export function publishCommands(commands = []) {
   const items = Array.isArray(commands) ? commands.filter(Boolean) : [];
   if (!items.length) return Promise.resolve({ ok: true, envelopes: [] });
-  if (items.length === 1) return publishCommand(items[0]).then(result => ({ ...result, envelopes: result?.envelope ? [result.envelope] : [] }));
-  return bridgeJson('/api/commands/batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ commands: items }) });
+  return new Promise((resolve, reject) => {
+    if (!pendingBatch) pendingBatch = { commands: new Map(), waiters: [] };
+    mergeBatch(pendingBatch.commands, items);
+    pendingBatch.waiters.push({ resolve, reject });
+    queueMicrotask(drainBatchQueue);
+  });
 }
 
 export function readBridgeHealth() { return bridgeJson('/health'); }
