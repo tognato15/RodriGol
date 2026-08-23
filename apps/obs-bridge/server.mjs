@@ -39,6 +39,8 @@ let lastPublicationAt=null;
 let reconnects=0;
 const remoteStorage=new Map();
 const persistentData=new Map();
+const recordRevisions=new Map();
+const deletedRecordRevisions=new Map();
 let dataRevision=0;
 let dataWriteQueue=Promise.resolve();
 let dataPersistTimer=null;
@@ -444,15 +446,17 @@ function publicHome(date){
 }
 
 
-function persistentEnvelope(reason="runtime"){return {version:2,revision:dataRevision,updatedAt:new Date().toISOString(),reason,recordCount:persistentData.size,records:Object.fromEntries(persistentData)};}
+function persistentEnvelope(reason="runtime"){return {version:3,revision:dataRevision,updatedAt:new Date().toISOString(),reason,recordCount:persistentData.size,records:Object.fromEntries(persistentData),recordRevisions:Object.fromEntries(recordRevisions),deletedRecordRevisions:Object.fromEntries(deletedRecordRevisions)};}
+function noteRecordRevision(key,deleted=false){const target=deleted?deletedRecordRevisions:recordRevisions,other=deleted?recordRevisions:deletedRecordRevisions;target.set(key,dataRevision);other.delete(key);}
+function snapshotSince(since=0){if(!since)return{partial:false,records:Object.fromEntries(persistentData),deletedKeys:[]};const records={};for(const [key,value] of persistentData){if((Number(recordRevisions.get(key))||0)>since)records[key]=value;}const deletedKeys=[...deletedRecordRevisions.entries()].filter(([,revision])=>(Number(revision)||0)>since).map(([key])=>key);return{partial:true,records,deletedKeys};}
 async function listBackupFiles(){try{return (await readdir(backupRoot)).filter(name=>name.endsWith(".json")).sort().reverse();}catch{return[];}}
 async function pruneBackups(){const files=await listBackupFiles();for(const name of files.slice(MAX_AUTOMATIC_BACKUPS))await unlink(join(backupRoot,name)).catch(()=>{});}
 async function backupCurrentData(reason="automatic"){if(!persistentData.size)return null;await mkdir(backupRoot,{recursive:true});const stamp=new Date().toISOString().replace(/[:.]/g,"-");const file=join(backupRoot,`rodrigol-store-${stamp}-${reason}.json`);await writeFile(file,JSON.stringify(persistentEnvelope(reason),null,2),"utf8");lastBackupAt=new Date().toISOString();await pruneBackups();return file;}
 function scheduleAutomaticBackup(){if(backupTimer)return;backupTimer=setTimeout(()=>{backupTimer=null;dataWriteQueue=dataWriteQueue.then(()=>backupCurrentData("automatic")).catch(error=>console.error("Falha no backup automático:",error));},AUTO_BACKUP_DELAY_MS);backupTimer.unref?.();}
 async function loadPersistentData(){
-  try{const parsed=JSON.parse(await readFile(dataFile,"utf8"));dataRevision=Number(parsed.revision)||0;lastDataSavedAt=parsed.updatedAt||null;for(const [key,value] of Object.entries(parsed.records||{}))persistentData.set(key,value);return;}
+  try{const parsed=JSON.parse(await readFile(dataFile,"utf8"));dataRevision=Number(parsed.revision)||0;lastDataSavedAt=parsed.updatedAt||null;for(const [key,value] of Object.entries(parsed.records||{}))persistentData.set(key,value);for(const [key,revision] of Object.entries(parsed.recordRevisions||{}))recordRevisions.set(key,Number(revision)||0);for(const [key,revision] of Object.entries(parsed.deletedRecordRevisions||{}))deletedRecordRevisions.set(key,Number(revision)||0);if(!recordRevisions.size)for(const key of persistentData.keys())recordRevisions.set(key,dataRevision);return;}
   catch(error){if(error?.code==="ENOENT")return;console.error("Falha ao carregar dados persistentes; tentando backup automático:",error);}
-  for(const name of await listBackupFiles()){try{const parsed=JSON.parse(await readFile(join(backupRoot,name),"utf8"));persistentData.clear();dataRevision=Number(parsed.revision)||0;lastDataSavedAt=parsed.updatedAt||null;for(const [key,value] of Object.entries(parsed.records||{}))persistentData.set(key,value);console.warn(`Base recuperada automaticamente do backup ${name}.`);await persistData();return;}catch{}}
+  for(const name of await listBackupFiles()){try{const parsed=JSON.parse(await readFile(join(backupRoot,name),"utf8"));persistentData.clear();recordRevisions.clear();deletedRecordRevisions.clear();dataRevision=Number(parsed.revision)||0;lastDataSavedAt=parsed.updatedAt||null;for(const [key,value] of Object.entries(parsed.records||{}))persistentData.set(key,value);for(const [key,revision] of Object.entries(parsed.recordRevisions||{}))recordRevisions.set(key,Number(revision)||0);for(const [key,revision] of Object.entries(parsed.deletedRecordRevisions||{}))deletedRecordRevisions.set(key,Number(revision)||0);if(!recordRevisions.size)for(const key of persistentData.keys())recordRevisions.set(key,dataRevision);console.warn(`Base recuperada automaticamente do backup ${name}.`);await persistData();return;}catch{}}
 }
 async function persistData(){await mkdir(dataRoot,{recursive:true});const temp=`${dataFile}.tmp`;const envelope=persistentEnvelope("runtime");await writeFile(temp,JSON.stringify(envelope,null,2),"utf8");await rename(temp,dataFile);lastDataSavedAt=envelope.updatedAt;}
 function flushQueuedPersistence(){
@@ -612,16 +616,16 @@ const server=createServer(async(request,response)=>{
       if(backup?.format!=="rodrigol-backup")throw new Error("Backup RodriGol inválido.");
       const imported=backupRecords(backup);
       if(persistentData.size)await backupCurrentData("before-import");
-      persistentData.clear();
+      persistentData.clear();recordRevisions.clear();deletedRecordRevisions.clear();
       for(const [key,value] of imported)persistentData.set(key,value);
-      dataRevision+=1;
+      dataRevision+=1;for(const key of persistentData.keys())recordRevisions.set(key,dataRevision);
       await queuePersistData(0);
       broadcastDataChange("__backup_import__",{records:imported.size},false,"backup-import");
       json(response,200,{ok:true,revision:dataRevision,records:imported.size});
     }catch(error){json(response,400,{ok:false,error:error.message||"Falha ao importar backup."});}
     return;
   }
-  if(pathname==="/api/data/snapshot"){if(!requireAuth(request,response))return;const since=Number(url.searchParams.get("since"))||0;if(since>=dataRevision){json(response,200,{ok:true,revision:dataRevision,unchanged:true});return;}json(response,200,{ok:true,revision:dataRevision,records:Object.fromEntries(persistentData)});return;}
+  if(pathname==="/api/data/snapshot"){if(!requireAuth(request,response))return;const since=Number(url.searchParams.get("since"))||0;if(since>=dataRevision){json(response,200,{ok:true,revision:dataRevision,unchanged:true,partial:true,records:{},deletedKeys:[]});return;}const delta=snapshotSince(since);json(response,200,{ok:true,revision:dataRevision,...delta});return;}
   if(pathname.startsWith("/api/data-patch/")&&request.method==="PATCH"){
     if(!requireAuth(request,response))return;
     const parts=pathname.slice("/api/data-patch/".length).split("/").map(decodeURIComponent),kind=parts[0],id=parts.slice(1).join("/");
@@ -634,7 +638,7 @@ const server=createServer(async(request,response)=>{
       }else if(kind==="history"){
         key="rodrigol-history-v1";const state=persistentData.get(key)||{entries:[]},entries=Array.isArray(state.entries)?[...state.entries]:[];const index=entries.findIndex(item=>String(item?.matchId)===id);if(index>=0)entries[index]={...entries[index],...value};else entries.unshift(value);persistentData.set(key,{...state,entries:entries.slice(0,500)});
       }else{json(response,404,{ok:false,error:"Tipo de patch desconhecido."});return;}
-      dataRevision+=1;const envelope=broadcastDataPatch(key,{op:"upsert",value:patchValue},source);queuePersistData().catch(()=>{});json(response,202,{ok:true,key,revision:dataRevision,envelope,persisted:false});
+      dataRevision+=1;noteRecordRevision(key,false);const envelope=broadcastDataPatch(key,{op:"upsert",value:patchValue},source);queuePersistData().catch(()=>{});json(response,202,{ok:true,key,revision:dataRevision,envelope,persisted:false});
     }catch(error){json(response,400,{ok:false,error:error?.message||"Patch inválido."});}
     return;
   }
@@ -643,8 +647,8 @@ const server=createServer(async(request,response)=>{
     const key=decodeURIComponent(pathname.slice(10)||"");
     if(!key){json(response,400,{ok:false,error:"Chave obrigatória."});return;}
     if(request.method==="GET"){json(response,200,{ok:true,key,revision:dataRevision,value:persistentData.has(key)?persistentData.get(key):null});return;}
-    if(request.method==="PUT"){try{const body=JSON.parse(await readBody(request));persistentData.set(key,body.value);dataRevision+=1;const envelope=broadcastDataChange(key,body.value,false,body.source||"api");queuePersistData().catch(()=>{});json(response,202,{ok:true,key,revision:dataRevision,envelope,persisted:false});}catch(error){json(response,400,{ok:false,error:error.message||"JSON inválido"});}return;}
-    if(request.method==="DELETE"){persistentData.delete(key);dataRevision+=1;const envelope=broadcastDataChange(key,null,true,"api");queuePersistData().catch(()=>{});json(response,202,{ok:true,key,revision:dataRevision,envelope,persisted:false});return;}
+    if(request.method==="PUT"){try{const body=JSON.parse(await readBody(request));persistentData.set(key,body.value);dataRevision+=1;noteRecordRevision(key,false);const envelope=broadcastDataChange(key,body.value,false,body.source||"api");queuePersistData().catch(()=>{});json(response,202,{ok:true,key,revision:dataRevision,envelope,persisted:false});}catch(error){json(response,400,{ok:false,error:error.message||"JSON inválido"});}return;}
+    if(request.method==="DELETE"){persistentData.delete(key);dataRevision+=1;noteRecordRevision(key,true);const envelope=broadcastDataChange(key,null,true,"api");queuePersistData().catch(()=>{});json(response,202,{ok:true,key,revision:dataRevision,envelope,persisted:false});return;}
   }
   if(pathname.startsWith("/api/storage/")){if(!requireAuth(request,response))return;const namespace=decodeURIComponent(pathname.slice(13)||"default");if(request.method==="GET"){json(response,200,{namespace,payload:remoteStorage.get(namespace)||null,updatedAt:remoteStorage.get(`${namespace}:updatedAt`)||null});return;}if(request.method==="PUT"){try{const payload=JSON.parse(await readBody(request));remoteStorage.set(namespace,payload);remoteStorage.set(`${namespace}:updatedAt`,new Date().toISOString());json(response,200,{ok:true,namespace});}catch(error){json(response,400,{ok:false,error:error.message||"JSON inválido"});}return;}}
   if(pathname==="/api/commands/batch"&&request.method==="POST"){

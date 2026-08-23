@@ -82,9 +82,9 @@ export async function publishStudioLiveUpdate(){
     {type:'show',region:'live-events',payload:eventsPayload(matches)}
   ]);
 }
-export function scheduleStudioSnapshot(delayMs=2500){
+export function scheduleStudioSnapshot(delayMs=5000){
   clearTimeout(deferredSnapshotTimer);
-  deferredSnapshotTimer=setTimeout(()=>{publishStudioSnapshot().catch(error=>console.warn('Studio snapshot adiado falhou.',error));},Math.max(500,Number(delayMs)||2500));
+  deferredSnapshotTimer=setTimeout(()=>{publishStudioSnapshot().catch(error=>console.warn('Studio snapshot adiado falhou.',error));},Math.max(1200,Number(delayMs)||5000));
 }
 export async function publishStudioSnapshot(){
   const {matches,selected,round}=buildStudioCollections();

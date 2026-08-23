@@ -198,6 +198,8 @@ async function loadWideData(){
 }
 async function reconcileRemoteSnapshot(snapshot={}){
   const records=snapshot.records||{};
+  const partial=snapshot.partial===true;
+  const deletedKeys=Array.isArray(snapshot.deletedKeys)?snapshot.deletedKeys:[];
   const remoteKeys=new Set(Object.keys(records).filter(key=>isWideDataKey(key)));
   const localKeys=[...wideDataCache.keys()].filter(key=>isWideDataKey(key));
   if(!remoteConflictDetected&&remoteKeys.size<=2&&localKeys.length>=10){
@@ -207,11 +209,19 @@ async function reconcileRemoteSnapshot(snapshot={}){
     console.error('[RodriGol] Sincronização bloqueada por segurança:',detail);
     return false;
   }
-  for(const key of [...wideDataCache.keys()]){
-    if(remoteKeys.has(key))continue;
+  if(!partial){
+    for(const key of [...wideDataCache.keys()]){
+      if(remoteKeys.has(key))continue;
+      wideDataCache.delete(key);
+      queueWidePersistence(key,null,true,false);
+      window.dispatchEvent(new CustomEvent('rodrigol:data-changed',{detail:{key,value:null,source:'remote'}}));
+    }
+  }
+  for(const key of deletedKeys){
+    if(!isWideDataKey(key))continue;
     wideDataCache.delete(key);
     queueWidePersistence(key,null,true,false);
-    window.dispatchEvent(new CustomEvent('rodrigol:data-changed',{detail:{key,value:null,source:'remote'}}));
+    window.dispatchEvent(new CustomEvent('rodrigol:data-changed',{detail:{key,value:null,source:'remote-delta'}}));
   }
   for(const [key,value] of Object.entries(records)){
     if(isRemoteAssetKey(key)){await applyRemoteAssetRecord(key,value);continue;}

@@ -16,11 +16,11 @@ test('Go-Live 1.5.3 serializa envelope WebSocket uma vez por comando', () => {
 });
 
 test('Go-Live 1.5.3 lifecycle publica feed leve e adia snapshot amplo', () => {
-  assert.match(control, /publishStudioLiveUpdate\(\)\.catch\(error => log\(error\.message\)\); scheduleStudioSnapshot\(2500\);/);
+  assert.match(control, /publishStudioLiveUpdate\(\)\.catch\(error => log\(error\.message\)\); scheduleStudioSnapshot\(5000\);/);
   const setPhase = control.slice(control.indexOf('function setPhase'), control.indexOf('function makeEvent'));
   assert.doesNotMatch(setPhase, /publishStudioSnapshot\(\)/);
 });
 
 test('Go-Live 1.5.3 encerramento evita snapshot amplo bloqueante', () => {
-  assert.match(control, /archiveCurrentCoverage\('Cobertura encerrada pelo operador'\); await publishScoreboard\(true\); await publishStudioLiveUpdate\(\); scheduleStudioSnapshot\(2500\)/);
+  assert.match(control, /archiveCurrentCoverage\('Cobertura encerrada pelo operador'\); await publishScoreboard\(true\); await publishStudioLiveUpdate\(\); scheduleStudioSnapshot\(5000\)/);
 });

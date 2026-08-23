@@ -41,7 +41,7 @@ test('Go-Live 1.5 separa update imediato e snapshot pesado adiado', async () => 
   assert.match(regions, /export async function publishStudioLiveUpdate/);
   assert.match(regions, /export function scheduleStudioSnapshot/);
   assert.match(control, /publishStudioLiveUpdate\(\)/);
-  assert.match(control, /scheduleStudioSnapshot\(2500\)/);
+  assert.match(control, /scheduleStudioSnapshot\(5000\)/);
 });
 
 

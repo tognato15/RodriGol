@@ -51,6 +51,8 @@ const EVENT_META = {
 };
 const initialState = { homeScore: 0, awayScore: 0, penaltiesHome: 0, penaltiesAway: 0, homeScorers: [], awayScorers: [], events: [], phase: 'PRE_GAME', elapsedSeconds: 0, clockRunning: false, clockStartedAt: null, selectedType: 'GOAL', referee: '', attendance: '', weather: '', lineups: { home: { coach: '', starters: [], bench: [] }, away: { coach: '', starters: [], bench: [] } } };
 let editingEventId = null;
+let timelineVisibleLimit = 30;
+let deferredFullRenderTimer = null;
 let lineupDraftDirty = false;
 
 const requestedMatchId = new URLSearchParams(location.search).get('matchId');
@@ -298,7 +300,9 @@ function render() {
 function renderTimeline() {
   const list = $('timelineList');
   if (!state.events.length) { list.innerHTML = '<div class="empty">Nenhum evento registrado.</div>'; return; }
-  list.innerHTML = state.events.map(event => `<article class="timeline-item"><b class="minute">${event.minute}'</b><span class="tag" style="background:${event.color}22;color:${event.color};border:1px solid ${event.color}66">${event.icon} ${event.label}</span><div><strong>${escapeHtml(event.player || event.title || teamName(event.team))}</strong><small>${escapeHtml(event.details || teamName(event.team))}</small></div><b class="score-after">${event.score || ''}</b><div class="event-actions"><button data-edit-event="${event.id}">Editar</button><button class="danger" data-delete-event="${event.id}">Excluir</button></div></article>`).join('');
+  const visibleEvents=state.events.slice(0,timelineVisibleLimit);
+  list.innerHTML = visibleEvents.map(event => `<article class="timeline-item"><b class="minute">${event.minute}'</b><span class="tag" style="background:${event.color}22;color:${event.color};border:1px solid ${event.color}66">${event.icon} ${event.label}</span><div><strong>${escapeHtml(event.player || event.title || teamName(event.team))}</strong><small>${escapeHtml(event.details || teamName(event.team))}</small></div><b class="score-after">${event.score || ''}</b><div class="event-actions"><button data-edit-event="${event.id}">Editar</button><button class="danger" data-delete-event="${event.id}">Excluir</button></div></article>`).join('') + (state.events.length>visibleEvents.length?`<div class="timeline-more"><button type="button" id="timelineLoadMore">Mostrar mais (${visibleEvents.length}/${state.events.length})</button></div>`:'');
+  $('timelineLoadMore')?.addEventListener('click',()=>{timelineVisibleLimit+=30;renderTimeline();});
   list.querySelectorAll('[data-edit-event]').forEach(button => button.addEventListener('click', () => editEvent(button.dataset.editEvent)));
   list.querySelectorAll('[data-delete-event]').forEach(button => button.addEventListener('click', () => deleteEvent(button.dataset.deleteEvent)));
 }
@@ -519,7 +523,7 @@ function startClock() {
   state.clockRunning = true;
   state.clockStartedAt = Date.now();
   addSystemTimelineEvent(state.phase === 'SECOND_HALF' ? 'SECOND_HALF_START' : 'MATCH_START', state.phase === 'SECOND_HALF' ? 'RECOMEÇOU' : 'COMEÇOU', '▶', phase().period);
-  saveState(); render(); updateClockButton(); ensureTickTimer(); publishScoreboard().catch(error => log(error.message)); publishStudioLiveUpdate().catch(error => log(error.message)); scheduleStudioSnapshot(2500);
+  saveState(); render(); updateClockButton(); ensureTickTimer(); publishScoreboard().catch(error => log(error.message)); publishStudioLiveUpdate().catch(error => log(error.message)); scheduleStudioSnapshot(5000);
 }
 function renderClockTick() {
   const currentPhase = phase();
@@ -546,6 +550,17 @@ function pauseClock() {
   updateClockButton(); stopTickTimer(); saveState(); render(); publishScoreboard().catch(error => log(error.message));
 }
 function resetClock() { if (state.clockRunning) freezeElapsed(); state.clockRunning = false; state.elapsedSeconds = 0; state.clockStartedAt = null; stopTickTimer(); saveState(); render(); updateClockButton(); publishScoreboard().catch(error => log(error.message)); }
+function scheduleDeferredFullRender(delay=450){
+  clearTimeout(deferredFullRenderTimer);
+  deferredFullRenderTimer=setTimeout(()=>{if(!document.hidden)render();},Math.max(120,Number(delay)||450));
+}
+function renderLifecycleFast(){
+  const meta=phaseMeta(state.phase);
+  $('homeScoreText').textContent=state.homeScore; $('awayScoreText').textContent=state.awayScore;
+  $('matchStatusBadge').textContent=meta.status||meta.label||state.phase; $('periodLabel').textContent=meta.period||'';
+  $('matchPhase').value=state.phase;
+  renderClockTick(); renderOnAirStatus(); updateClockButton();
+}
 function setPhase(value) {
   if (state.clockRunning && (value === 'HALFTIME' || value === 'FINAL' || value === 'LIVE_UNKNOWN')) freezeElapsed();
   const previousPhase = state.phase;
@@ -560,7 +575,7 @@ function setPhase(value) {
   if (value === 'FIRST_HALF' && effectiveElapsed() >= 45 * 60) { state.elapsedSeconds = 0; state.clockStartedAt = state.clockRunning ? Date.now() : null; }
   if (value === 'SECOND_HALF' && effectiveElapsed() < 45 * 60) { state.elapsedSeconds = 45 * 60; state.clockStartedAt = state.clockRunning ? Date.now() : null; }
   if(value==='FINAL'){const result=finishMatch(match.id,state);if(result){match=result.match;state={...state,...result.coverage};}}else{const result=transitionMatch(match.id,value,state);if(result){match=result.match;state={...state,...result.coverage};}}
-  render(); updateClockButton(); publishScoreboard().catch(error => log(error.message)); publishStudioLiveUpdate().catch(error => log(error.message)); scheduleStudioSnapshot(2500);
+  renderLifecycleFast(); scheduleDeferredFullRender(500); publishScoreboard().catch(error => log(error.message)); publishStudioLiveUpdate().catch(error => log(error.message)); scheduleStudioSnapshot(5000);
 }
 function makeEvent() {
   const meta = EVENT_META[state.selectedType],createdAt=new Date().toISOString(),id=crypto.randomUUID?.() || String(Date.now());
@@ -613,7 +628,7 @@ async function publishEvent() {
     if (editingEventId) { const index = state.events.findIndex(item => item.id === editingEventId); if (index >= 0) { event.id = editingEventId; state.events[index] = event; rebuildFromEvents(); } editingEventId = null; $('publishEvent').textContent = '⚡ REGISTRAR & PUBLICAR'; } else { applyEvent(event); }
     saveState(); renderEventFast();
     Promise.allSettled([publishScoreboard(),publishStudioLiveUpdate()]).then(results=>{for(const result of results)if(result.status==='rejected')log(result.reason?.message||String(result.reason));});
-    scheduleStudioSnapshot(2500);
+    scheduleStudioSnapshot(5000);
     const title = event.type === 'GOAL' ? `GOL DO ${teamName(event.team).toUpperCase()}!` : event.label;
     const scoreText = `${home.shortName} ${state.homeScore} x ${state.awayScore} ${away.shortName}`;
     const text = event.type === 'GOAL' ? [title, event.player, scoreText].filter(Boolean).join(' — ') : [title, event.player, event.details].filter(Boolean).join(' — ');
@@ -668,7 +683,7 @@ $('team').addEventListener('change',()=>{renderSubstitutionFields();renderEventP
 $('publishEvent').addEventListener('click', publishEvent);
 $('undoEvent').addEventListener('click', undoLast);
 $('setOnAir').addEventListener('click', async () => { setOnAirMatchId(match.id); render(); await publishScoreboard(true); });
-$('endCoverage').addEventListener('click', async () => { setPhase('FINAL'); archiveCurrentCoverage('Cobertura encerrada pelo operador'); await publishScoreboard(true); await publishStudioLiveUpdate(); scheduleStudioSnapshot(2500); });
+$('endCoverage').addEventListener('click', async () => { setPhase('FINAL'); archiveCurrentCoverage('Cobertura encerrada pelo operador'); await publishScoreboard(true); await publishStudioLiveUpdate(); scheduleStudioSnapshot(5000); });
 
 // Navegação interna: todos os caminhos visíveis levam a uma área real da tela.
 document.querySelectorAll('[data-section]').forEach(button => button.addEventListener('click', () => {
