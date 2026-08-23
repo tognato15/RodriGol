@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="broadcast-design-system.css">
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="studio-loading">
   <main class="studio-overlay" aria-label="Overlay RodriGol Studio">
     <header class="studio-topbar bp-header">
       <section class="datetime bp-header__datetime" aria-label="Data e horário">
@@ -33,8 +33,8 @@
           <div class="main-match-body bp-main-match bp-main-match--blueprint">
             <div class="bp-match-context" aria-label="Contexto do jogo principal">
               <span>JOGO PRINCIPAL</span>
-              <strong id="mainCompetition">CAMPEONATO BRASILEIRO · 18ª RODADA</strong>
-              <em id="mainStatus">AO VIVO</em>
+              <strong id="mainCompetition">CARREGANDO...</strong>
+              <em id="mainStatus">AGUARDANDO</em>
             </div>
             <aside class="bp-match-summary" aria-label="Sumário da partida">
               <header><span>☷</span><strong>SUMÁRIO DA PARTIDA</strong></header>
@@ -45,21 +45,21 @@
               <section class="main-team home-team bp-main-team" aria-label="Equipe mandante">
                 <div id="homeCrest" class="main-crest bp-main-crest"><span>MAN</span></div>
                 <div class="team-copy bp-team-copy">
-                  <strong id="homeName">MANDANTE</strong>
-                  <div class="bp-team-eventline"><small id="homeScorers">⚽ 12' R. Veiga · ⚽ 58' Flaco López</small></div>
+                  <strong id="homeName">CARREGANDO...</strong>
+                  <div class="bp-team-eventline"><small id="homeScorers"></small></div>
                 </div>
               </section>
               <section class="score-center bp-score-center" aria-label="Placar da partida">
-                <div class="period-line bp-period" id="mainPeriod">2º TEMPO</div>
-                <div class="score-line"><span id="homePenalty" class="penalty-score" hidden>(0)</span><b id="homeScore">2</b><i>×</i><b id="awayScore">1</b><span id="awayPenalty" class="penalty-score" hidden>(0)</span></div>
+                <div class="period-line bp-period" id="mainPeriod">AGUARDANDO</div>
+                <div class="score-line"><span id="homePenalty" class="penalty-score" hidden>(0)</span><b id="homeScore">—</b><i>×</i><b id="awayScore">—</b><span id="awayPenalty" class="penalty-score" hidden>(0)</span></div>
                 <div class="time-line bp-clock"><strong id="mainClock"></strong></div>
-                <div class="bp-venue"><small id="mainVenue">ALLIANZ PARQUE</small></div>
+                <div class="bp-venue"><small id="mainVenue">AGUARDANDO PARTIDA</small></div>
               </section>
               <section class="main-team away-team bp-main-team" aria-label="Equipe visitante">
                 <div id="awayCrest" class="main-crest bp-main-crest"><span>VIS</span></div>
                 <div class="team-copy bp-team-copy">
-                  <strong id="awayName">VISITANTE</strong>
-                  <div class="bp-team-eventline"><small id="awayScorers">⚽ 37' Pedro</small></div>
+                  <strong id="awayName">CARREGANDO...</strong>
+                  <div class="bp-team-eventline"><small id="awayScorers"></small></div>
                 </div>
               </section>
 

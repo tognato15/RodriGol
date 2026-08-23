@@ -1640,3 +1640,6 @@
   from{transform:translate3d(0,0,0)}
   to{transform:translate3d(calc(-1 * var(--highlight-distance,0px)),0,0)}
 }
+
+/* Go-Live 1.7.1: o Overlay não exibe dados fictícios antes da primeira partida canônica. */
+.studio-loading .round-board,.studio-loading .events-board{visibility:hidden}.studio-loading #homePenalty,.studio-loading #awayPenalty{display:none!important}

@@ -178,6 +178,34 @@ function resolveCanonicalPublicPhase(match={},coverage={},matching=[],baseMatch=
   const values=[coverage.phase,match.status,baseMatch?.phase,baseMatch?.status,...matching.flatMap(item=>[item?.phase,item?.period,item?.status,item?.isFinal===true?'FINAL':''])].filter(Boolean);
   return values.sort((a,b)=>publicPhaseRank(b)-publicPhaseRank(a))[0]||'PROGRAMADO';
 }
+function publicCanonicalKnockout(matchId,fallback=null){
+  const raw=publicRecord('rodrigol-knockout-v1',{competitions:{}})||{};
+  for(const model of Object.values(raw.competitions||{})){
+    for(const phase of model?.phases||[]){
+      for(const tie of phase?.ties||[]){
+        if(![tie.singleMatchId,tie.firstLegMatchId,tie.secondLegMatchId].map(String).includes(String(matchId)))continue;
+        if(phase.legMode!=='TWO_LEGS')return {legMode:'SINGLE',phase:phase.name||'',aggregate:null};
+        return {
+          legMode:'TWO_LEGS',phase:phase.name||'',
+          tieHome:fallback?.tieHome||null,tieAway:fallback?.tieAway||null,
+          firstLeg:{home:Number(tie.firstLegHomeScore)||0,away:Number(tie.firstLegAwayScore)||0,matchId:tie.firstLegMatchId||''},
+          secondLeg:{home:Number(tie.secondLegHomeScore)||0,away:Number(tie.secondLegAwayScore)||0,matchId:tie.secondLegMatchId||''},
+          aggregate:{home:Number(tie.aggregateHome)||0,away:Number(tie.aggregateAway)||0},
+          penalties:(Number(tie.penaltiesHome)||Number(tie.penaltiesAway))?{home:Number(tie.penaltiesHome)||0,away:Number(tie.penaltiesAway)||0}:null,
+          winnerClubId:tie.winnerClubId||''
+        };
+      }
+    }
+  }
+  return fallback||null;
+}
+function publicStateRevision(matchId){
+  return Math.max(
+    Number(recordRevisions.get(`rodrigol-coverage-v1:${matchId}`))||0,
+    Number(recordRevisions.get(PUBLIC_KEYS.matches))||0,
+    Number(recordRevisions.get('rodrigol-knockout-v1'))||0
+  );
+}
 function publicRegionMatch(id,baseMatch=null){
   const wanted=String(id||"");
   // O round-scoreboard é publicado no caminho rápido de cada lance.
@@ -252,7 +280,8 @@ function publicRegionMatch(id,baseMatch=null){
     competitionId:firstValue(x=>x?.competitionId,baseMatch?.competitionId||""),
     round:firstValue(x=>x?.round,baseMatch?.round||""),
     roundId:firstValue(x=>x?.roundId,baseMatch?.roundId||""),
-    knockout:firstValue(x=>x?.knockout,baseMatch?.knockout||null),
+    knockout:publicCanonicalKnockout(matchId,firstValue(x=>x?.knockout,baseMatch?.knockout||null)),
+    stateRevision:publicStateRevision(matchId),
     venue:firstValue(x=>x?.venue,coverage.venue||baseMatch?.venue||""),
     phase,
     status:beforeKickoff?"PROGRAMADO":(
@@ -274,16 +303,16 @@ function publicRegionMatch(id,baseMatch=null){
       crest:firstValue(x=>x?.awayCrest?.image,baseMatch?.away?.crest||"")
     },
     score:{
-      home:Number(firstValue(x=>x?.homeScore,coverage.homeScore??baseMatch?.score?.home??0))||0,
-      away:Number(firstValue(x=>x?.awayScore,coverage.awayScore??baseMatch?.score?.away??0))||0
+      home:Number(coverage.homeScore??firstValue(x=>x?.homeScore,baseMatch?.score?.home??0))||0,
+      away:Number(coverage.awayScore??firstValue(x=>x?.awayScore,baseMatch?.score?.away??0))||0
     },
     penalties:{
-      home:Number(firstValue(x=>x?.penaltiesHome,coverage.penaltiesHome??baseMatch?.penalties?.home??0))||0,
-      away:Number(firstValue(x=>x?.penaltiesAway,coverage.penaltiesAway??baseMatch?.penalties?.away??0))||0
+      home:Number(coverage.penaltiesHome??firstValue(x=>x?.penaltiesHome,baseMatch?.penalties?.home??0))||0,
+      away:Number(coverage.penaltiesAway??firstValue(x=>x?.penaltiesAway,baseMatch?.penalties?.away??0))||0
     },
     scorers:{
-      home:firstValue(x=>Array.isArray(x?.homeGoals)&&x.homeGoals.length?x.homeGoals:null,coverage.homeScorers||baseMatch?.scorers?.home||[]),
-      away:firstValue(x=>Array.isArray(x?.awayGoals)&&x.awayGoals.length?x.awayGoals:null,coverage.awayScorers||baseMatch?.scorers?.away||[])
+      home:Array.isArray(coverage.homeScorers)&&coverage.homeScorers.length?coverage.homeScorers:firstValue(x=>Array.isArray(x?.homeGoals)&&x.homeGoals.length?x.homeGoals:null,baseMatch?.scorers?.home||[]),
+      away:Array.isArray(coverage.awayScorers)&&coverage.awayScorers.length?coverage.awayScorers:firstValue(x=>Array.isArray(x?.awayGoals)&&x.awayGoals.length?x.awayGoals:null,baseMatch?.scorers?.away||[])
     },
     clock:{
       elapsedSeconds:Number(firstValue(x=>x?.elapsedSeconds,coverage.elapsedSeconds??baseMatch?.clock?.elapsedSeconds??0))||0,
@@ -541,6 +570,38 @@ function broadcast(command,source="api"){
   else notifyPublicEvent("command",{region:command.region});
   return envelope;
 }
+function canonicalOverlayMatch(match={}){
+  const phase=String(match.phase||match.status||'PROGRAMADO');
+  const beforeKickoff=publicPhaseRank(phase)<=20;
+  const isFinal=publicPhaseRank(phase)>=90;
+  const crestPayload=(team={})=>({image:typeof team.crest==='string'?team.crest:'',text:team.abbreviation||String(team.name||'?').slice(0,3).toUpperCase(),background:'#18394a',color:'#fff'});
+  return {
+    matchId:match.id,competition:match.competition||'',competitionShort:'',date:match.date||'',time:match.time||'',round:match.round||'',roundId:match.roundId||'',
+    homeName:match.home?.name||'Mandante',awayName:match.away?.name||'Visitante',homeShort:match.home?.abbreviation||'',awayShort:match.away?.abbreviation||'',homeCrest:crestPayload(match.home),awayCrest:crestPayload(match.away),
+    homeScore:Number(match.score?.home)||0,awayScore:Number(match.score?.away)||0,penaltiesHome:Number(match.penalties?.home)||0,penaltiesAway:Number(match.penalties?.away)||0,
+    homeScorers:(match.scorers?.home||[]).join(' · ')||'—',awayScorers:(match.scorers?.away||[]).join(' · ')||'—',
+    homeGoals:(match.scorers?.home||[]).map(scorer=>({minute:String(scorer).match(/\d+(?:\+\d+)?/)?.[0]||'',player:String(scorer).replace(/^\s*\d+(?:\+\d+)?[’'º°]?\s*/,'').trim()||'Gol'})),
+    awayGoals:(match.scorers?.away||[]).map(scorer=>({minute:String(scorer).match(/\d+(?:\+\d+)?/)?.[0]||'',player:String(scorer).replace(/^\s*\d+(?:\+\d+)?[’'º°]?\s*/,'').trim()||'Gol'})),
+    phase,status:phase,period:phase,beforeKickoff,isFinal,clockVisible:match.clock?.visible!==false,elapsedSeconds:Number(match.clock?.elapsedSeconds)||0,clockRunning:Boolean(match.clock?.running),clockStartedAt:match.clock?.startedAt||null,
+    chronology:Array.isArray(match.events)?match.events:[],lineups:match.lineups||{},venue:match.facts?.venue||match.venue||'',referee:match.facts?.referee||'',attendance:match.facts?.attendance||'',weather:match.facts?.weather||'',knockout:match.knockout||null,stateRevision:Number(match.stateRevision)||0
+  };
+}
+let canonicalStudioTimer=null;
+function scheduleCanonicalStudioBroadcast(){
+  clearTimeout(canonicalStudioTimer);
+  canonicalStudioTimer=setTimeout(()=>{
+    const stored=publicArray(PUBLIC_KEYS.matches);
+    const canonical=stored.map(item=>publicRegionMatch(item.id,publicMatch(item))).filter(Boolean);
+    const live=canonical.filter(item=>item.live).map(canonicalOverlayMatch);
+    broadcast({type:'show',region:'round-scoreboard',payload:live},'canonical-state');
+    const onAirId=String(publicRecord('rodrigol-on-air-match-v1','')||'');
+    if(onAirId){
+      const base=stored.find(item=>String(item.id)===onAirId);
+      const current=publicRegionMatch(onAirId,base?publicMatch(base):null);
+      if(current)broadcast({type:'show',region:'scoreboard',payload:canonicalOverlayMatch(current)},'canonical-state');
+    }
+  },80);
+}
 function validCommand(value){if(!value||typeof value!=="object"||typeof value.type!=="string")return false;if(value.type==="clear-all")return true;return typeof value.region==="string"&&["show","update","hide","clear"].includes(value.type);}
 function safeEqual(a='',b=''){const left=Buffer.from(String(a)),right=Buffer.from(String(b));return left.length===right.length&&timingSafeEqual(left,right);}
 function cookies(request){const out={};for(const part of String(request.headers.cookie||'').split(';')){const index=part.indexOf('=');if(index<0)continue;out[part.slice(0,index).trim()]=decodeURIComponent(part.slice(index+1).trim());}return out;}
@@ -638,7 +699,7 @@ const server=createServer(async(request,response)=>{
       }else if(kind==="history"){
         key="rodrigol-history-v1";const state=persistentData.get(key)||{entries:[]},entries=Array.isArray(state.entries)?[...state.entries]:[];const index=entries.findIndex(item=>String(item?.matchId)===id);if(index>=0)entries[index]={...entries[index],...value};else entries.unshift(value);persistentData.set(key,{...state,entries:entries.slice(0,500)});
       }else{json(response,404,{ok:false,error:"Tipo de patch desconhecido."});return;}
-      dataRevision+=1;noteRecordRevision(key,false);const envelope=broadcastDataPatch(key,{op:"upsert",value:patchValue},source);queuePersistData().catch(()=>{});json(response,202,{ok:true,key,revision:dataRevision,envelope,persisted:false});
+      dataRevision+=1;noteRecordRevision(key,false);const envelope=broadcastDataPatch(key,{op:"upsert",value:patchValue},source);if(key.startsWith('rodrigol-coverage-v1:')||key===PUBLIC_KEYS.matches||key==='rodrigol-knockout-v1'||key==='rodrigol-on-air-match-v1')scheduleCanonicalStudioBroadcast();queuePersistData().catch(()=>{});json(response,202,{ok:true,key,revision:dataRevision,envelope,persisted:false});
     }catch(error){json(response,400,{ok:false,error:error?.message||"Patch inválido."});}
     return;
   }
@@ -647,8 +708,8 @@ const server=createServer(async(request,response)=>{
     const key=decodeURIComponent(pathname.slice(10)||"");
     if(!key){json(response,400,{ok:false,error:"Chave obrigatória."});return;}
     if(request.method==="GET"){json(response,200,{ok:true,key,revision:dataRevision,value:persistentData.has(key)?persistentData.get(key):null});return;}
-    if(request.method==="PUT"){try{const body=JSON.parse(await readBody(request));persistentData.set(key,body.value);dataRevision+=1;noteRecordRevision(key,false);const envelope=broadcastDataChange(key,body.value,false,body.source||"api");queuePersistData().catch(()=>{});json(response,202,{ok:true,key,revision:dataRevision,envelope,persisted:false});}catch(error){json(response,400,{ok:false,error:error.message||"JSON inválido"});}return;}
-    if(request.method==="DELETE"){persistentData.delete(key);dataRevision+=1;noteRecordRevision(key,true);const envelope=broadcastDataChange(key,null,true,"api");queuePersistData().catch(()=>{});json(response,202,{ok:true,key,revision:dataRevision,envelope,persisted:false});return;}
+    if(request.method==="PUT"){try{const body=JSON.parse(await readBody(request));persistentData.set(key,body.value);dataRevision+=1;noteRecordRevision(key,false);const envelope=broadcastDataChange(key,body.value,false,body.source||"api");if(key.startsWith('rodrigol-coverage-v1:')||key===PUBLIC_KEYS.matches||key==='rodrigol-knockout-v1'||key==='rodrigol-on-air-match-v1')scheduleCanonicalStudioBroadcast();queuePersistData().catch(()=>{});json(response,202,{ok:true,key,revision:dataRevision,envelope,persisted:false});}catch(error){json(response,400,{ok:false,error:error.message||"JSON inválido"});}return;}
+    if(request.method==="DELETE"){persistentData.delete(key);dataRevision+=1;noteRecordRevision(key,true);const envelope=broadcastDataChange(key,null,true,"api");if(key.startsWith('rodrigol-coverage-v1:')||key===PUBLIC_KEYS.matches||key==='rodrigol-knockout-v1'||key==='rodrigol-on-air-match-v1')scheduleCanonicalStudioBroadcast();queuePersistData().catch(()=>{});json(response,202,{ok:true,key,revision:dataRevision,envelope,persisted:false});return;}
   }
   if(pathname.startsWith("/api/storage/")){if(!requireAuth(request,response))return;const namespace=decodeURIComponent(pathname.slice(13)||"default");if(request.method==="GET"){json(response,200,{namespace,payload:remoteStorage.get(namespace)||null,updatedAt:remoteStorage.get(`${namespace}:updatedAt`)||null});return;}if(request.method==="PUT"){try{const payload=JSON.parse(await readBody(request));remoteStorage.set(namespace,payload);remoteStorage.set(`${namespace}:updatedAt`,new Date().toISOString());json(response,200,{ok:true,namespace});}catch(error){json(response,400,{ok:false,error:error.message||"JSON inválido"});}return;}}
   if(pathname==="/api/commands/batch"&&request.method==="POST"){
