@@ -11,10 +11,10 @@ test('Go-Live 1.6.3 serializa e consolida lotes do Bridge',()=>{
   assert.match(bridge,/queueMicrotask\(drainBatchQueue\)/);
 });
 
-test('Go-Live 1.6.3 abre circuito do batch e usa fallback sequencial',()=>{
-  assert.match(bridge,/batchCircuitUntil = Date\.now\(\) \+ 120000/);
-  assert.match(bridge,/publishSequentially\(commands\)/);
+test('Go-Live 1.6.3+ mantém circuito de proteção sem tempestade de retry',()=>{
+  assert.match(bridge,/batchCircuitUntil = Date\.now\(\) \+ 30000/);
   assert.match(bridge,/error instanceof BridgeRequestError && error\.status === 0/);
+  assert.match(bridge,/transport:'http-failed'/);
 });
 
 test('Portal compacto remove horário duplicado de partidas programadas',()=>{
@@ -22,13 +22,13 @@ test('Portal compacto remove horário duplicado de partidas programadas',()=>{
   assert.match(portal,/match-list-status:empty\{display:none\}/);
 });
 
-test('Portal compacto publica linha fina de autores dos gols',()=>{
+test('Portal compacto publica autores dos gols junto de cada equipe',()=>{
   assert.match(portal,/function scorerListText/);
-  assert.match(portal,/class=\"match-scorers\"/);
+  assert.match(portal,/class=\"match-team-copy\"/);
+  assert.match(portal,/class=\"team-scorers/);
   assert.match(portal,/match\.scorers\?\.home/);
   assert.match(portal,/match\.scorers\?\.away/);
 });
-
 test('Portal compacto usa um seletor de data com calendário mensal',()=>{
   assert.match(portal,/id=\"datePickerButton\"/);
   assert.match(portal,/id=\"calendarPopover\"/);

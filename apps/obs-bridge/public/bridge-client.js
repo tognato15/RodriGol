@@ -4,6 +4,46 @@ export class BridgeRequestError extends Error {
   constructor(message, status = 0, cause = null) { super(message); this.name = 'BridgeRequestError'; this.status = status; this.cause = cause; }
 }
 
+// Go-Live 1.6.4: o caminho operacional reutiliza um WebSocket já aberto pela página.
+// Gol, fase e placar não precisam criar uma nova conexão HTTP/2 para cada clique.
+const managedSockets = new Set();
+const commandAckWaiters = new Map();
+let commandRequestSequence = 0;
+
+function socketTransport(){
+  for (const socket of managedSockets) if (socket?.readyState === WebSocket.OPEN) return socket;
+  return null;
+}
+function settleCommandAck(message = {}){
+  if (message?.type !== 'command-ack' || !message.requestId) return false;
+  const waiter = commandAckWaiters.get(message.requestId);
+  if (!waiter) return true;
+  commandAckWaiters.delete(message.requestId);
+  clearTimeout(waiter.timer);
+  if (message.ok === false) waiter.reject(new BridgeRequestError(message.error || 'Bridge rejeitou o comando.', Number(message.status)||0));
+  else waiter.resolve(message);
+  return true;
+}
+function observeSocketMessage(event){
+  if (typeof event?.data !== 'string') return false;
+  try { return settleCommandAck(JSON.parse(event.data)); } catch { return false; }
+}
+function publishViaSocket(type, payload){
+  const socket = socketTransport();
+  if (!socket) return null;
+  const requestId = `op-${Date.now()}-${++commandRequestSequence}`;
+  // A confirmação é observada em segundo plano. Para a interface, o envio para a
+  // conexão persistente já é suficiente: nenhuma ação de operador espera RTT.
+  try { socket.send(JSON.stringify({ type, requestId, ...payload })); }
+  catch { return null; }
+  const ack = new Promise((resolve,reject)=>{
+    const timer=setTimeout(()=>{commandAckWaiters.delete(requestId);resolve({ok:true,transport:'websocket',requestId,ackTimeout:true});},2500);
+    commandAckWaiters.set(requestId,{resolve,reject,timer});
+  });
+  ack.catch(()=>{});
+  return Promise.resolve({ok:true,transport:'websocket',requestId,queued:true});
+}
+
 export async function bridgeFetch(path, options = {}) {
   const cfg = getRuntimeConfig();
   const controller = new AbortController();
@@ -32,6 +72,8 @@ export async function bridgeJson(path, options = {}) {
 }
 
 export function publishCommand(body) {
+  const socketResult = publishViaSocket('publish-command', { command: body });
+  if (socketResult) return socketResult;
   return bridgeJson('/api/commands', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 }
 
@@ -61,21 +103,22 @@ async function publishSequentially(commands = []) {
 }
 
 async function sendBatchResilient(commands = []) {
-  if (Date.now() < batchCircuitUntil) return publishSequentially(commands);
+  const socketResult = publishViaSocket('publish-commands', { commands });
+  if (socketResult) return socketResult;
+  if (Date.now() < batchCircuitUntil) return {ok:false,transport:'http-circuit-open',queued:false};
   try {
     return await bridgeJson('/api/commands/batch', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ commands }),
-      timeoutMs: 12000
+      timeoutMs: 5000
     });
   } catch (error) {
-    // Chromium/HTTP2 pode abortar um lote mesmo com o Bridge saudável. Evitamos
-    // tempestades de retry: abrimos o circuito do batch e preservamos a operação
-    // enviando os comandos individualmente, em série, pela conexão normal.
+    // Sem WebSocket, uma falha de transporte abre o circuito. Não criamos uma
+    // tempestade batch -> commands -> commands: o próximo estado substituirá o antigo.
     if (error instanceof BridgeRequestError && error.status === 0) {
-      batchCircuitUntil = Date.now() + 120000;
-      return publishSequentially(commands);
+      batchCircuitUntil = Date.now() + 30000;
+      return {ok:false,transport:'http-failed',queued:false,error:error.message};
     }
     throw error;
   }
@@ -125,10 +168,10 @@ export function createManagedSocket({ onOpen, onMessage, onClose, onStatus } = {
     status('connecting', { url: bridgeWebSocketUrl() });
     try {
       socket = new WebSocket(bridgeWebSocketUrl());
-      socket.addEventListener('open', event => { attempt = 0; lastMessageAt = Date.now(); status('connected'); onOpen?.(event, socket); });
-      socket.addEventListener('message', event => { lastMessageAt = Date.now(); status('connected'); onMessage?.(event, socket); });
+      socket.addEventListener('open', event => { managedSockets.add(socket); attempt = 0; lastMessageAt = Date.now(); status('connected'); onOpen?.(event, socket); });
+      socket.addEventListener('message', event => { lastMessageAt = Date.now(); status('connected'); if (!observeSocketMessage(event)) onMessage?.(event, socket); });
       socket.addEventListener('close', event => {
-        onClose?.(event);
+        managedSockets.delete(socket); onClose?.(event);
         if (stopped) return;
         attempt += 1;
         const delay = Math.min(cfg.reconnectMaxMs, cfg.reconnectMinMs * (2 ** Math.min(attempt - 1, 5)));
@@ -144,7 +187,7 @@ export function createManagedSocket({ onOpen, onMessage, onClose, onStatus } = {
     }
   };
   const restart = () => { try { socket?.close(); } catch {} clearTimeout(timer); attempt = 0; stopped = false; connect(); };
-  const stop = () => { stopped = true; clearTimeout(timer); try { socket?.close(); } catch {} };
+  const stop = () => { stopped = true; clearTimeout(timer); managedSockets.delete(socket); try { socket?.close(); } catch {} };
   addEventListener('rodrigol:runtime-config-changed', restart);
   connect();
   return { stop, restart, get socket(){ return socket; } };

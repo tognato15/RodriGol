@@ -486,6 +486,7 @@ function json(response,status,body){response.writeHead(status,{"Content-Type":"a
 function redirect(response,location){response.writeHead(308,{Location:location,"Cache-Control":"no-store"});response.end();}
 function frameText(text){const payload=Buffer.from(text);if(payload.length<126)return Buffer.concat([Buffer.from([0x81,payload.length]),payload]);if(payload.length<65536){const head=Buffer.alloc(4);head[0]=0x81;head[1]=126;head.writeUInt16BE(payload.length,2);return Buffer.concat([head,payload]);}const head=Buffer.alloc(10);head[0]=0x81;head[1]=127;head.writeBigUInt64BE(BigInt(payload.length),2);return Buffer.concat([head,payload]);}
 function framePing(){return Buffer.from([0x89,0x00]);}
+function framePong(payload=Buffer.alloc(0)){const length=Math.min(125,payload.length);return Buffer.concat([Buffer.from([0x8a,length]),payload.subarray(0,length)]);}
 function prepareSocketMessage(message){return frameText(JSON.stringify(message));}
 function sendPrepared(socket,frame){if(!socket.destroyed)socket.write(frame);}
 function send(socket,message){sendPrepared(socket,prepareSocketMessage(message));}
@@ -675,6 +676,54 @@ const server=createServer(async(request,response)=>{
   const overlayPath=pathname==="/favicon.ico"?"/assets/favicon.svg":pathname;await serve(overlayRoot,overlayPath,response);
 });
 
+function handleClientSocketMessage(socket,text){
+  let message=null;
+  try{message=JSON.parse(text);}catch{return;}
+  const requestId=String(message?.requestId||"");
+  try{
+    if(message?.type==="publish-command"){
+      const command=message.command;
+      if(!validCommand(command)){send(socket,{type:"command-ack",requestId,ok:false,status:400,error:"Comando inválido."});return;}
+      const envelope=broadcast(command,"ws");
+      send(socket,{type:"command-ack",requestId,ok:true,count:1,sequences:[envelope.sequence]});
+      return;
+    }
+    if(message?.type==="publish-commands"){
+      const commands=Array.isArray(message.commands)?message.commands:[];
+      if(!commands.length||commands.length>20||commands.some(command=>!validCommand(command))){send(socket,{type:"command-ack",requestId,ok:false,status:400,error:"Lote inválido."});return;}
+      const envelopes=commands.map(command=>broadcast(command,"ws-batch"));
+      send(socket,{type:"command-ack",requestId,ok:true,count:envelopes.length,sequences:envelopes.map(item=>item.sequence)});
+    }
+  }catch(error){send(socket,{type:"command-ack",requestId,ok:false,status:500,error:error instanceof Error?error.message:"Falha no comando."});}
+}
+function consumeClientSocketFrames(socket,chunk){
+  let buffer=socket._rodrigolWsBuffer?Buffer.concat([socket._rodrigolWsBuffer,chunk]):Buffer.from(chunk);
+  let offset=0;
+  while(offset+2<=buffer.length){
+    const first=buffer[offset],second=buffer[offset+1],fin=(first&0x80)!==0,opcode=first&0x0f,masked=(second&0x80)!==0;
+    let length=second&0x7f,header=2;
+    if(length===126){if(offset+4>buffer.length)break;length=buffer.readUInt16BE(offset+2);header=4;}
+    else if(length===127){if(offset+10>buffer.length)break;const big=buffer.readBigUInt64BE(offset+2);if(big>BigInt(Number.MAX_SAFE_INTEGER)){socket.destroy();return;}length=Number(big);header=10;}
+    const maskBytes=masked?4:0,total=header+maskBytes+length;
+    if(offset+total>buffer.length)break;
+    const maskStart=offset+header,payloadStart=maskStart+maskBytes;
+    const payload=Buffer.from(buffer.subarray(payloadStart,payloadStart+length));
+    if(masked){const mask=buffer.subarray(maskStart,maskStart+4);for(let i=0;i<payload.length;i++)payload[i]^=mask[i%4];}
+    offset+=total;
+    if(opcode===0x8){clients.delete(socket);socket.end();return;}
+    if(opcode===0x9){if(!socket.destroyed)socket.write(framePong(payload));continue;}
+    if(opcode===0x1){
+      if(fin)handleClientSocketMessage(socket,payload.toString("utf8"));
+      else socket._rodrigolWsFragment=[payload];
+      continue;
+    }
+    if(opcode===0x0&&socket._rodrigolWsFragment){
+      socket._rodrigolWsFragment.push(payload);
+      if(fin){const joined=Buffer.concat(socket._rodrigolWsFragment);socket._rodrigolWsFragment=null;handleClientSocketMessage(socket,joined.toString("utf8"));}
+    }
+  }
+  socket._rodrigolWsBuffer=offset<buffer.length?buffer.subarray(offset):null;
+}
 server.on("upgrade",(request,socket)=>{
   const url=new URL(request.url??"/",`http://${host}`);if(url.pathname!=="/ws"){socket.destroy();return;}
   const wsToken=String(url.searchParams.get("token")||"");
@@ -685,7 +734,7 @@ server.on("upgrade",(request,socket)=>{
   socket.write(["HTTP/1.1 101 Switching Protocols","Upgrade: websocket","Connection: Upgrade",`Sec-WebSocket-Accept: ${accept}`,"\r\n"].join("\r\n"));
   clients.add(socket);send(socket,{type:"welcome",version:bridgeVersion,sequence,lastCommand,regions:stateSnapshot()});
   socket.on("close",()=>{clients.delete(socket);reconnects+=1;});socket.on("error",()=>clients.delete(socket));
-  socket.on("data",buffer=>{if((buffer[0]&0x0f)===0x8){clients.delete(socket);socket.end();}});
+  socket.on("data",buffer=>consumeClientSocketFrames(socket,buffer));
 });
 
 const heartbeat=setInterval(()=>{for(const socket of clients){if(socket.destroyed)clients.delete(socket);else socket.write(framePing());}for(const response of [...publicEventClients]){try{response.write(": keepalive\n\n");}catch{publicEventClients.delete(response);}}},15000);heartbeat.unref();
