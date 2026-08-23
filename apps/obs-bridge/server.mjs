@@ -171,6 +171,11 @@ function mergeLineupSources(...sources){
   return {home:side('home'),away:side('away')};
 }
 
+function publicPhaseRank(value=''){const phase=String(value||'').toUpperCase();if(['FINAL','FINISHED','CONFIRMED','ARCHIVED'].includes(phase))return 90;if(phase==='PENALTIES')return 80;if(phase==='EXTRA_TIME')return 70;if(phase==='SECOND_HALF')return 60;if(phase==='HALFTIME'||phase==='INTERVALO')return 50;if(['LIVE_UNKNOWN','LIVE','IN_PROGRESS','IN_PROGRESS_UNKNOWN'].includes(phase))return 45;if(phase==='FIRST_HALF')return 40;if(['PRE_GAME','PRE_MATCH'].includes(phase))return 20;if(['SCHEDULED','PROGRAMADO'].includes(phase))return 10;return 0;}
+function resolveCanonicalPublicPhase(match={},coverage={},matching=[],baseMatch=null){
+  const values=[coverage.phase,match.status,baseMatch?.phase,baseMatch?.status,...matching.flatMap(item=>[item?.phase,item?.period,item?.status,item?.isFinal===true?'FINAL':''])].filter(Boolean);
+  return values.sort((a,b)=>publicPhaseRank(b)-publicPhaseRank(a))[0]||'PROGRAMADO';
+}
 function publicRegionMatch(id,baseMatch=null){
   const wanted=String(id||"");
   // O round-scoreboard é publicado no caminho rápido de cada lance.
@@ -220,10 +225,7 @@ function publicRegionMatch(id,baseMatch=null){
     baseMatch?.lineups
   );
 
-  const phase=String(
-    matching.map(x=>x?.phase||x?.period||x?.status).find(Boolean)||
-    baseMatch?.phase||baseMatch?.status||"PROGRAMADO"
-  );
+  const phase=String(resolveCanonicalPublicPhase({status:baseMatch?.status||''},coverage,matching,baseMatch));
   const beforeKickoff=
     matching.some(x=>x?.beforeKickoff===true)||
     ["PROGRAMADO","SCHEDULED","PRE_MATCH"].includes(phase.toUpperCase());
@@ -531,7 +533,7 @@ function broadcast(command,source="api"){
   const frame=prepareSocketMessage(envelope);for(const socket of clients)sendPrepared(socket,frame);
   // Go-Live 1.6.2: o placar público recebe o estado canônico no mesmo evento SSE do comando.
   // Assim o Portal não precisa esperar um novo GET /api/public/home para mostrar um gol/fase.
-  if(command.region==="round-scoreboard")notifyPublicEvent("live",{region:command.region,matches:publicLiveMatches()});
+  if(command.region==="round-scoreboard"){const changedId=String(command.payload?.matchId||command.payload?.id||"");notifyPublicEvent("live",{region:command.region,matches:publicLiveMatches(),changedMatch:changedId?publicRegionMatch(changedId):null,replaceLive:true});}
   else notifyPublicEvent("command",{region:command.region});
   return envelope;
 }

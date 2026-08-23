@@ -8,9 +8,11 @@ const HISTORY_KEY = 'rodrigol-history-v1';
 const COMPETITIONS_KEY = 'rodrigol-competitions-v1';
 const STORAGE_ERROR_KEY = 'rodrigol-storage-error-v1';
 const WIDE_DATA_STORE = 'data-records';
+const REMOTE_REVISION_KEY = 'rodrigol-remote-data-revision-v1';
 const wideDataCache = new Map();
 let wideDataDb = null;
-let remoteDataRevision = 0;
+let remoteDataRevision = Number(localStorage.getItem(REMOTE_REVISION_KEY)) || 0;
+let remoteHydrationPending = false;
 const clientInstanceId = crypto.randomUUID?.() || `client-${Date.now()}-${Math.random()}`;
 const pendingWideWrites = new Map();
 const remoteRetryQueue = new Map();
@@ -28,7 +30,7 @@ const seedCompetitions = [
   {id:'brasileirao-a',name:'Campeonato Brasileiro Série A',shortName:'Brasileirão Série A',abbreviation:'BR1',country:'Brasil',continent:'América do Sul',sport:'Futebol',format:'LEAGUE',season:'2026',primaryColor:'#15803d',secondaryColor:'#ffffff',accentColor:'#f59e0b',logoDataUrl:'',priority:1},
   {id:'amistoso',name:'Amistoso',shortName:'Amistoso',abbreviation:'AMIS',country:'',continent:'',sport:'Futebol',format:'FRIENDLY',season:'2026',primaryColor:'#2563eb',secondaryColor:'#ffffff',accentColor:'#60a5fa',logoDataUrl:'',priority:99}
 ];
-export function getCompetitions(){if(!has(COMPETITIONS_KEY))write(COMPETITIONS_KEY,seedCompetitions.map(({logoDataUrl,...item})=>item));return parse(COMPETITIONS_KEY,[]).map(item=>({...item,logoDataUrl:competitionLogoCache.get(item.id)||''})).sort((a,b)=>(Number(a.priority)||999)-(Number(b.priority)||999)||String(a.name).localeCompare(String(b.name)));}
+export function getCompetitions(){if(!has(COMPETITIONS_KEY)){if(remoteHydrationPending)return [];write(COMPETITIONS_KEY,seedCompetitions.map(({logoDataUrl,...item})=>item));}return parse(COMPETITIONS_KEY,[]).map(item=>({...item,logoDataUrl:competitionLogoCache.get(item.id)||''})).sort((a,b)=>(Number(a.priority)||999)-(Number(b.priority)||999)||String(a.name).localeCompare(String(b.name)));}
 export function saveCompetitions(items){return write(COMPETITIONS_KEY,items.map(({logoDataUrl,...item})=>item));}
 export async function upsertCompetition(item){const items=getCompetitions();const index=items.findIndex(x=>x.id===item.id);const {logoDataUrl,...record}=item;if(logoDataUrl!==undefined)await setCompetitionLogo(item.id,logoDataUrl);const normalized={...record,logoDataUrl:logoDataUrl||competitionLogoCache.get(item.id)||''};if(index>=0)items[index]=normalized;else items.push(normalized);return saveCompetitions(items);}
 export function deleteCompetition(id){deleteCompetitionLogo(id).catch(()=>{});return saveCompetitions(getCompetitions().filter(x=>x.id!==id));}
@@ -45,7 +47,7 @@ const seedMatches = [
 
 function isWideDataKey(key) {
   return String(key || '').startsWith('rodrigol-')
-    && !['rodrigol-runtime-config-v2','rodrigol-storage-error-v1'].includes(String(key));
+    && !['rodrigol-runtime-config-v2','rodrigol-storage-error-v1',REMOTE_REVISION_KEY].includes(String(key));
 }
 function has(key) { return isWideDataKey(key) ? wideDataCache.has(key) : localStorage.getItem(key) !== null; }
 function parse(key, fallback) {
@@ -84,6 +86,7 @@ function runtimeForDataSync(){
 
 function bridgeBaseForData(){ const cfg=runtimeForDataSync(); return String(cfg.bridgeHttp || location.origin).replace(/\/$/,''); }
 function authHeadersForData(extra={}){ const token=String(runtimeForDataSync().apiToken||'').trim(); return token?{...extra,Authorization:`Bearer ${token}`}:{...extra}; }
+function rememberRemoteRevision(value){ remoteDataRevision=Math.max(remoteDataRevision,Number(value)||0); try{localStorage.setItem(REMOTE_REVISION_KEY,String(remoteDataRevision));}catch{} return remoteDataRevision; }
 
 function queueRemoteRetry(key, value, deleted=false){
   remoteRetryQueue.set(key,{key,value,deleted,attempts:(remoteRetryQueue.get(key)?.attempts||0)+1});
@@ -94,7 +97,7 @@ async function flushRemoteRetries(){
   remoteRetryTimer=null;
   const cfg=runtimeForDataSync();if(!cfg.remoteStorageEnabled||!remoteRetryQueue.size)return;
   for(const [key,item] of [...remoteRetryQueue]){
-    try{const response=await fetch(`${bridgeBaseForData()}/api/data/${encodeURIComponent(key)}`,{method:item.deleted?'DELETE':'PUT',credentials:'include',headers:authHeadersForData({'Content-Type':'application/json'}),body:item.deleted?undefined:JSON.stringify({value:item.value,source:clientInstanceId})});if(!response.ok)throw new Error(`Servidor respondeu ${response.status}`);const result=await response.json();remoteDataRevision=Math.max(remoteDataRevision,Number(result.revision)||0);remoteRetryQueue.delete(key);}
+    try{const response=await fetch(`${bridgeBaseForData()}/api/data/${encodeURIComponent(key)}`,{method:item.deleted?'DELETE':'PUT',credentials:'include',headers:authHeadersForData({'Content-Type':'application/json'}),body:item.deleted?undefined:JSON.stringify({value:item.value,source:clientInstanceId})});if(!response.ok)throw new Error(`Servidor respondeu ${response.status}`);const result=await response.json();rememberRemoteRevision(result.revision);remoteRetryQueue.delete(key);}
     catch(error){item.attempts+=1;remoteRetryQueue.set(key,item);window.dispatchEvent(new CustomEvent('rodrigol:remote-storage-error',{detail:{key,error:error.message,retrying:true,attempts:item.attempts}}));}
   }
   if(remoteRetryQueue.size)remoteRetryTimer=setTimeout(flushRemoteRetries,Math.min(15000,2000+remoteRetryQueue.size*500));
@@ -115,7 +118,7 @@ function queueWidePersistence(key, value, deleted=false, syncRemote=true){
       method:deleted?'DELETE':'PUT',credentials:'include',headers:authHeadersForData({'Content-Type':'application/json'}),
       body:deleted?undefined:JSON.stringify({value,source:clientInstanceId})
     }).then(r=>{if(!r.ok)throw new Error(`Servidor respondeu ${r.status}`);return r.json();})
-      .then(result=>{remoteDataRevision=Math.max(remoteDataRevision,Number(result.revision)||0);remoteRetryQueue.delete(key);})
+      .then(result=>{rememberRemoteRevision(result.revision);remoteRetryQueue.delete(key);})
       .catch(error=>{queueRemoteRetry(key,value,deleted);window.dispatchEvent(new CustomEvent('rodrigol:remote-storage-error',{detail:{key,error:error.message,retrying:true}}));});
   }
 }
@@ -169,7 +172,7 @@ function queueRemoteAsset(kind,id,value){
     credentials:'include',
     body:value?JSON.stringify({value,source:clientInstanceId}):undefined
   }).then(r=>{if(!r.ok)throw new Error(`Servidor respondeu ${r.status}`);return r.json();})
-    .then(result=>{remoteDataRevision=Math.max(remoteDataRevision,Number(result.revision)||0);})
+    .then(result=>{rememberRemoteRevision(result.revision);})
     .catch(error=>window.dispatchEvent(new CustomEvent('rodrigol:remote-storage-error',{detail:{key,error:error.message}})));
 }
 async function applyRemoteAssetRecord(key,value){
@@ -224,9 +227,11 @@ async function reconcileRemoteSnapshot(snapshot={}){
 async function hydrateRemoteData(){
   const cfg=runtimeForDataSync(); if(!cfg.remoteStorageEnabled)return;
   try{
-    const response=await fetch(`${bridgeBaseForData()}/api/data/snapshot`,{credentials:'include',headers:authHeadersForData()});
+    const suffix=remoteDataRevision?`?since=${encodeURIComponent(remoteDataRevision)}`:'';
+    const response=await fetch(`${bridgeBaseForData()}/api/data/snapshot${suffix}`,{credentials:'include',headers:authHeadersForData()});
     if(!response.ok)throw new Error(`Servidor respondeu ${response.status}`);
-    const snapshot=await response.json(); remoteDataRevision=Number(snapshot.revision)||0;
+    const snapshot=await response.json(); rememberRemoteRevision(snapshot.revision);
+    if(snapshot.unchanged)return true;
     await reconcileRemoteSnapshot(snapshot);
   }catch(error){window.dispatchEvent(new CustomEvent('rodrigol:remote-storage-error',{detail:{error:error.message}}));}
 }
@@ -237,16 +242,17 @@ async function pollRemoteData(){
     if(!response.ok)return;
     const snapshot=await response.json();
     if(snapshot.unchanged||(Number(snapshot.revision)||0)<=remoteDataRevision)return;
-    remoteDataRevision=Number(snapshot.revision)||0;
+    rememberRemoteRevision(snapshot.revision);
     await reconcileRemoteSnapshot(snapshot);
   }catch{}
 }
 await loadWideData().catch(error=>reportStorageError('wide-data',error));
-await hydrateRemoteData();
+remoteHydrationPending=runtimeForDataSync().remoteStorageEnabled;
+const remoteHydrationPromise=new Promise(resolve=>setTimeout(resolve,800)).then(()=>hydrateRemoteData()).finally(()=>{remoteHydrationPending=false;window.dispatchEvent(new CustomEvent('rodrigol:remote-hydrated',{detail:{revision:remoteDataRevision}}));});
 let remoteDataSocket=null;
 function applyRemoteDataEnvelope(envelope={}){
   if(envelope.type==='data-patch'){
-    const revision=Number(envelope.revision)||0; remoteDataRevision=Math.max(remoteDataRevision,revision);
+    const revision=Number(envelope.revision)||0; rememberRemoteRevision(revision);
     if(envelope.source===clientInstanceId)return;
     const key=String(envelope.key||''), patch=envelope.patch||{};
     if(key===MATCHES_KEY&&patch.op==='upsert'&&patch.value?.id){const rows=getMatches();const i=rows.findIndex(x=>x.id===patch.value.id);if(i>=0)rows[i]=patch.value;else rows.push(patch.value);wideDataCache.set(key,rows);queueWidePersistence(key,rows,false,false);window.dispatchEvent(new CustomEvent('rodrigol:data-changed',{detail:{key,value:rows,source:'remote-ws-patch'}}));return;}
@@ -255,7 +261,7 @@ function applyRemoteDataEnvelope(envelope={}){
   }
   if(envelope.type!=='data-change')return;
   const revision=Number(envelope.revision)||0;
-  remoteDataRevision=Math.max(remoteDataRevision,revision);
+  rememberRemoteRevision(revision);
   if(envelope.source===clientInstanceId)return;
   const key=String(envelope.key||'');
   if(!key)return;
@@ -297,12 +303,12 @@ async function migrateClubCrests(){const stored=parse(CLUBS_KEY,[]);let changed=
 await migrateClubCrests().catch(()=>{});
 
 export function uid(prefix = 'item') { return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`; }
-export function getClubs() { if (!has(CLUBS_KEY)) write(CLUBS_KEY, seedClubs.map(({crestDataUrl,...club})=>club)); return parse(CLUBS_KEY, []).map(club=>({...club,crestDataUrl:clubCrestCache.get(club.id)||''})); }
+export function getClubs() { if (!has(CLUBS_KEY)) { if(remoteHydrationPending)return []; write(CLUBS_KEY, seedClubs.map(({crestDataUrl,...club})=>club)); } return parse(CLUBS_KEY, []).map(club=>({...club,crestDataUrl:clubCrestCache.get(club.id)||''})); }
 export function saveClubs(clubs) { return write(CLUBS_KEY, clubs.map(({crestDataUrl,...club})=>club)); }
 export async function upsertClub(club) { const clubs = getClubs(); const index = clubs.findIndex(item => item.id === club.id); const {crestDataUrl,...record}=club;if(crestDataUrl!==undefined)await setClubCrest(club.id,crestDataUrl);if(index>=0)clubs[index]={...record,crestDataUrl:crestDataUrl||clubCrestCache.get(club.id)||''};else clubs.push({...record,crestDataUrl:crestDataUrl||''});return saveClubs(clubs); }
 export function deleteClub(id) { saveClubs(getClubs().filter(item => item.id !== id)); deleteClubCrest(id).catch(()=>{}); saveMatches(getMatches().filter(match => match.homeClubId !== id && match.awayClubId !== id)); }
 export function getClub(id) { return getClubs().find(item => item.id === id) || null; }
-export function getMatches(){if(!has(MATCHES_KEY))return write(MATCHES_KEY,seedMatches);return parse(MATCHES_KEY,[]);}
+export function getMatches(){if(!has(MATCHES_KEY)){if(remoteHydrationPending)return [];return write(MATCHES_KEY,seedMatches);}return parse(MATCHES_KEY,[]);}
 export function saveMatches(matches) { return write(MATCHES_KEY, matches); }
 function queueRemoteRecordPatch(kind,id,value){
   const cfg=runtimeForDataSync(); if(!cfg.remoteStorageEnabled)return;
@@ -310,7 +316,7 @@ function queueRemoteRecordPatch(kind,id,value){
     method:'PATCH',credentials:'include',headers:authHeadersForData({'Content-Type':'application/json'}),
     body:JSON.stringify({value,source:clientInstanceId})
   }).then(r=>{if(!r.ok)throw new Error(`Servidor respondeu ${r.status}`);return r.json();})
-    .then(result=>{remoteDataRevision=Math.max(remoteDataRevision,Number(result.revision)||0);})
+    .then(result=>{rememberRemoteRevision(result.revision);})
     .catch(()=>{ // fallback seguro: a fila tradicional reenviará a coleção completa
       const key=kind==='match'?MATCHES_KEY:HISTORY_KEY;
       queueRemoteRetry(key,wideDataCache.get(key),false);
@@ -695,5 +701,5 @@ export function getJourneyImpact(journeyOrId){
   return {journey:journey||null,matches,buckets,appliedTo:['Central de Produção','Multicabine']};
 }
 
-export function getOperationalMatches(){const journey=getActiveJourney(),matches=getMatches();const active=m=>{const phase=String(readCoverage(m.id,{phase:m.status}).phase||m.status||'SCHEDULED').toUpperCase();return !['SCHEDULED','FINAL','FINISHED','CONFIRMED','ARCHIVED'].includes(phase)&&!m.archivedAt;};const operational=matches.filter(active);if(!journey)return operational;const ids=new Set(journey.matchIds||[]),competitions=new Set(journey.competitionIds||[]),rounds=new Set(journey.roundIds||[]);return matches.filter(m=>ids.has(m.id)||journeyCompetitionMatches(m,competitions)||journeyRoundMatches(m,rounds)).filter(active);}
+export function getOperationalMatches(){const journey=getActiveJourney(),matches=getMatches();const terminal=new Set(['SCHEDULED','FINAL','FINISHED','CONFIRMED','ARCHIVED']);const active=m=>{if(m.archivedAt)return false;const stored=String(m.status||'SCHEDULED').toUpperCase();if(terminal.has(stored))return false;const phase=String(readCoverage(m.id,{phase:stored}).phase||stored).toUpperCase();return !terminal.has(phase);};const operational=matches.filter(active);if(!journey)return operational;const ids=new Set(journey.matchIds||[]),competitions=new Set(journey.competitionIds||[]),rounds=new Set(journey.roundIds||[]);return matches.filter(m=>ids.has(m.id)||journeyCompetitionMatches(m,competitions)||journeyRoundMatches(m,rounds)).filter(active);}
 export function getMatchBuckets(){const buckets={upcoming:[],operational:[],finished:[],archived:[]};for(const match of getMatches()){const phase=String(readCoverage(match.id,{phase:match.status}).phase||match.status||'SCHEDULED').toUpperCase();if(match.archivedAt||phase==='ARCHIVED')buckets.archived.push(match);else if(['FINAL','FINISHED','CONFIRMED'].includes(phase))buckets.finished.push(match);else if(['SCHEDULED'].includes(phase))buckets.upcoming.push(match);else buckets.operational.push(match);}return buckets;}

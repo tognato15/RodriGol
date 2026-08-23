@@ -18,7 +18,7 @@ test('Go-Live 1.6 reduz health da Multicabine para 30 segundos', () => {
 });
 
 test('Go-Live 1.6 não republica Overlay por mudanças remotas', () => {
-  assert.match(multi, /window\.addEventListener\('rodrigol:data-changed',\(\)=>scheduleRender\(120\)\)/);
+  assert.match(multi, /window\.addEventListener\('rodrigol:data-changed',event=>/);
   assert.doesNotMatch(multi, /rodrigol:data-changed'[^\n]*publishOnAir\(true\)/);
 });
 

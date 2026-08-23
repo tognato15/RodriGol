@@ -46,6 +46,6 @@
 </div>
 <script src="/control/multicabine.js" type="module"></script>
 <script src="/control/multicabine-ops.js" type="module"></script>
-<script type="module">import{getCompetitions,getRounds}from'/control/data-store.js';const c=document.getElementById('competitionFilter'),r=document.getElementById('roundFilter');c.innerHTML+=[...getCompetitions()].map(x=>`<option value="${x.id}">${x.shortName||x.name}</option>`).join('');r.innerHTML+=[...getRounds()].map(x=>`<option value="${x.id}">${x.name}</option>`).join('');[document.getElementById('scopeFilter'),c,r,document.getElementById('phaseFilter')].forEach(x=>x.addEventListener('change',()=>window.dispatchEvent(new CustomEvent('rodrigol:data-changed'))));</script>
+<script>[document.getElementById('scopeFilter'),document.getElementById('competitionFilter'),document.getElementById('roundFilter'),document.getElementById('phaseFilter')].forEach(x=>x?.addEventListener('change',()=>window.dispatchEvent(new CustomEvent('rodrigol:multicabine-filter'))));</script>
 <script defer src="/control/global-nav.js"></script>
 </body></html>

@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises';
 const server=await readFile(new URL('../server.mjs',import.meta.url),'utf8');
 const portal=await readFile(new URL('../public/portal/index.html',import.meta.url),'utf8');
 test('Go-Live 1.6.2 envia placar live diretamente no SSE público',()=>{
-  assert.match(server,/notifyPublicEvent\("live",\{region:command\.region,matches:publicLiveMatches\(\)\}\)/);
+  assert.match(server,/notifyPublicEvent\("live",\{region:command\.region,matches:publicLiveMatches\(\),changedMatch:/);
   assert.match(portal,/payload\.kind==='live'&&applyLiveEvent\(payload\)/);
 });
 test('Go-Live 1.6.2 preserva ordem canônica dos acontecimentos',()=>{

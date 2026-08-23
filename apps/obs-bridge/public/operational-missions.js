@@ -12,8 +12,9 @@ const todayKey=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.get
 const norm=v=>String(v||'').trim().toUpperCase();
 
 export function collectOperationalSnapshot(){
-  const matches=getMatches(), competitions=new Map(getCompetitions().map(x=>[x.id,x])), rounds=new Map(getRounds().map(x=>[x.id,x])), clubs=new Map(getClubs().map(x=>[x.id,x]));
-  const activeJourney=getActiveJourney(), journeyIds=new Set(getJourneyMatches(activeJourney).map(x=>x.id)), onAirId=getOnAirMatchId();
+  const allMatches=getMatches(), competitions=new Map(getCompetitions().map(x=>[x.id,x])), rounds=new Map(getRounds().map(x=>[x.id,x])), clubs=new Map(getClubs().map(x=>[x.id,x]));
+  const activeJourney=getActiveJourney(), journeyIds=new Set(getJourneyMatches(activeJourney).map(x=>x.id)), onAirId=getOnAirMatchId(), today=todayKey();
+  const matches=allMatches.filter(match=>{const stored=norm(match.status||'SCHEDULED');return !match.archivedAt&&(match.date===today||journeyIds.has(match.id)||!['SCHEDULED','FINAL','FINISHED','CONFIRMED','ARCHIVED'].includes(stored));});
   const rows=matches.map(match=>{
     const coverage=readCoverage(match.id,{phase:match.status||'SCHEDULED',homeScore:match.homeScore||0,awayScore:match.awayScore||0,events:[]})||{};
     const visual=deriveVisualState(match,coverage), phase=norm(visual.phase||coverage.phase||match.status||'SCHEDULED');
@@ -30,8 +31,8 @@ function mission(id,severity,title,detail,href,actionLabel='Abrir',kind='OPERATI
   return {id,severity,title,detail,href,actionLabel,kind,matchId};
 }
 
-export function collectOperationalMissions(){
-  const {rows,activeJourney}=collectOperationalSnapshot(), missions=[], now=Date.now(), today=todayKey();
+export function collectOperationalMissions(snapshot=collectOperationalSnapshot()){
+  const {rows,activeJourney}=snapshot, missions=[], now=Date.now(), today=todayKey();
   for(const row of rows){
     const {match,coverage,phase,clockVisible,final,onAir,home,away}=row;
     const label=`${home?.shortName||'Mandante'} × ${away?.shortName||'Visitante'}`;
@@ -52,7 +53,7 @@ export function collectOperationalMissions(){
   return missions.sort((a,b)=>weight[a.severity]-weight[b.severity]||a.title.localeCompare(b.title));
 }
 
-export function summarizeOperationalState(){
-  const {rows,activeJourney}=collectOperationalSnapshot(), missions=collectOperationalMissions();
+export function summarizeOperationalState(snapshot=collectOperationalSnapshot(),missions=collectOperationalMissions(snapshot)){
+  const {rows,activeJourney}=snapshot;
   return {live:rows.filter(r=>LIVE.has(r.phase)).length,halftime:rows.filter(r=>r.phase==='HALFTIME').length,scheduledToday:rows.filter(r=>r.match.date===todayKey()&&['SCHEDULED','PRE_GAME'].includes(r.phase)).length,finalToday:rows.filter(r=>r.match.date===todayKey()&&r.final).length,onAir:rows.filter(r=>r.onAir).length,missions:missions.length,critical:missions.filter(m=>m.severity==='critical').length,high:missions.filter(m=>m.severity==='high').length,journey:activeJourney?.name||'Operação geral'};
 }
