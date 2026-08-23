@@ -141,7 +141,10 @@ function mergeUniquePublicEvents(groups=[]){
       seen.add(key);result.push(event);
     }
   }
-  return result.sort((a,b)=>(Number(b.minute)||0)-(Number(a.minute)||0));
+  const semanticMinute=event=>{const type=String(event.type||'').toUpperCase(),minute=Number(event.minute)||0;if(['FINAL','END'].includes(type))return 200;if(type==='PENALTIES')return 130;if(['SECOND_HALF_START','SECOND_HALF','RESTART'].includes(type))return 45.6;if(type==='HALFTIME')return 45.5;return minute;};
+  // Ordem canônica: quando há timestamp real, ele vence. Isso impede uma transição (ex.: INTERVALO)
+  // de ultrapassar um gol anterior apenas porque uma das fontes chegou depois ao Portal.
+  return result.sort((a,b)=>{const at=Date.parse(a.createdAt||''),bt=Date.parse(b.createdAt||'');if(Number.isFinite(at)&&Number.isFinite(bt)&&at!==bt)return bt-at;return semanticMinute(b)-semanticMinute(a);});
 }
 function richestPlayers(...lists){
   return lists
@@ -520,7 +523,17 @@ function applyToState(command){
 function stateSnapshot(){return Object.fromEntries(regionState.entries());}
 const legacyRegionAliases={ticker:"legacy-disabled","side-alert":"legacy-disabled","lower-third":"studio-lower-third",headline:"studio-headline",fullscreen:"studio-fullscreen"};
 function normalizeCommand(command){const mapped=legacyRegionAliases[command?.region];if(!mapped)return command;return {...command,region:mapped,meta:{...(command.meta||{}),legacyRegion:command.region}};}
-function broadcast(command,source="api"){command=normalizeCommand(command);applyToState(command);const envelope={type:"command",sequence:++sequence,source,sentAt:new Date().toISOString(),command};lastCommand=envelope;commandCount+=1;lastPublicationAt=envelope.sentAt;const frame=prepareSocketMessage(envelope);for(const socket of clients)sendPrepared(socket,frame);notifyPublicEvent("command",{region:command.region});return envelope;}
+function broadcast(command,source="api"){
+  command=normalizeCommand(command);applyToState(command);
+  const envelope={type:"command",sequence:++sequence,source,sentAt:new Date().toISOString(),command};
+  lastCommand=envelope;commandCount+=1;lastPublicationAt=envelope.sentAt;
+  const frame=prepareSocketMessage(envelope);for(const socket of clients)sendPrepared(socket,frame);
+  // Go-Live 1.6.2: o placar público recebe o estado canônico no mesmo evento SSE do comando.
+  // Assim o Portal não precisa esperar um novo GET /api/public/home para mostrar um gol/fase.
+  if(command.region==="round-scoreboard")notifyPublicEvent("live",{region:command.region,matches:publicLiveMatches()});
+  else notifyPublicEvent("command",{region:command.region});
+  return envelope;
+}
 function validCommand(value){if(!value||typeof value!=="object"||typeof value.type!=="string")return false;if(value.type==="clear-all")return true;return typeof value.region==="string"&&["show","update","hide","clear"].includes(value.type);}
 function safeEqual(a='',b=''){const left=Buffer.from(String(a)),right=Buffer.from(String(b));return left.length===right.length&&timingSafeEqual(left,right);}
 function cookies(request){const out={};for(const part of String(request.headers.cookie||'').split(';')){const index=part.indexOf('=');if(index<0)continue;out[part.slice(0,index).trim()]=decodeURIComponent(part.slice(index+1).trim());}return out;}
