@@ -10,6 +10,9 @@ export const MATCH_PHASE = Object.freeze({
   HALFTIME: 'HALFTIME',
   SECOND_HALF: 'SECOND_HALF',
   EXTRA_TIME: 'EXTRA_TIME',
+  EXTRA_TIME_FIRST_HALF: 'EXTRA_TIME_FIRST_HALF',
+  EXTRA_TIME_HALFTIME: 'EXTRA_TIME_HALFTIME',
+  EXTRA_TIME_SECOND_HALF: 'EXTRA_TIME_SECOND_HALF',
   PENALTIES: 'PENALTIES',
   LIVE_UNKNOWN: 'LIVE_UNKNOWN',
   FINAL: 'FINAL',
@@ -25,6 +28,9 @@ const PHASE_PRESENTATION = Object.freeze({
   HALFTIME: { status: 'INTERVALO', period: 'INTERVALO' },
   SECOND_HALF: { status: 'AO VIVO', period: '2º TEMPO' },
   EXTRA_TIME: { status: 'AO VIVO', period: 'PRORROGAÇÃO' },
+  EXTRA_TIME_FIRST_HALF: { status: 'AO VIVO', period: '1º TEMPO DA PRORROGAÇÃO' },
+  EXTRA_TIME_HALFTIME: { status: 'INTERVALO', period: 'INTERVALO DA PRORROGAÇÃO' },
+  EXTRA_TIME_SECOND_HALF: { status: 'AO VIVO', period: '2º TEMPO DA PRORROGAÇÃO' },
   PENALTIES: { status: 'PÊNALTIS', period: 'PÊNALTIS' },
   LIVE_UNKNOWN: { status: 'AO VIVO', period: 'EM ANDAMENTO' },
   FINAL: { status: 'FINAL', period: 'FIM DE JOGO' },
@@ -38,6 +44,9 @@ export function canonicalMatchPhase(value = '') {
   const raw = String(value || '').trim().toUpperCase();
   if (!raw) return '';
   if (Object.values(MATCH_PHASE).includes(raw)) return raw;
+  if (raw.includes('PRORROG') && (raw.includes('2º') || raw.includes('2°') || raw.includes('SEGUNDO'))) return MATCH_PHASE.EXTRA_TIME_SECOND_HALF;
+  if (raw.includes('PRORROG') && raw.includes('INTERVAL')) return MATCH_PHASE.EXTRA_TIME_HALFTIME;
+  if (raw.includes('PRORROG') && (raw.includes('1º') || raw.includes('1°') || raw.includes('PRIMEIRO'))) return MATCH_PHASE.EXTRA_TIME_FIRST_HALF;
   if (raw.includes('2º') || raw.includes('2°') || raw.includes('SEGUNDO')) return MATCH_PHASE.SECOND_HALF;
   if (raw.includes('1º') || raw.includes('1°') || raw.includes('PRIMEIRO')) return MATCH_PHASE.FIRST_HALF;
   if (raw.includes('INTERVAL')) return MATCH_PHASE.HALFTIME;
@@ -53,7 +62,7 @@ export function canonicalMatchPhase(value = '') {
   return raw;
 }
 
-const CLOCK_PHASES = new Set(['FIRST_HALF', 'SECOND_HALF', 'EXTRA_TIME']);
+const CLOCK_PHASES = new Set(['FIRST_HALF','SECOND_HALF','EXTRA_TIME','EXTRA_TIME_FIRST_HALF','EXTRA_TIME_SECOND_HALF']);
 const BEFORE_KICKOFF = new Set(['SCHEDULED', 'PRE_GAME']);
 const NO_SCORE = new Set(['SCHEDULED', 'PRE_GAME']);
 
@@ -153,7 +162,7 @@ export function deriveVisualState(match = null, coverage = {}) {
     period: labels.period,
     beforeKickoff: BEFORE_KICKOFF.has(phase),
     showScore: !NO_SCORE.has(phase),
-    isLive: ['FIRST_HALF', 'SECOND_HALF', 'EXTRA_TIME', 'PENALTIES', 'LIVE_UNKNOWN'].includes(phase),
+    isLive: ['FIRST_HALF','SECOND_HALF','EXTRA_TIME','EXTRA_TIME_FIRST_HALF','EXTRA_TIME_HALFTIME','EXTRA_TIME_SECOND_HALF','PENALTIES','LIVE_UNKNOWN'].includes(phase),
     isFinal: phase === MATCH_PHASE.FINAL
   };
 }

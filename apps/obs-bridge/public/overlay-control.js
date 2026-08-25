@@ -8,7 +8,7 @@ import { buildMatchPresentationPayload, deriveVisualState, formatClockSeconds, g
 
 const $ = id => document.getElementById(id);
 const FALLBACK = { homeScore:0, awayScore:0, homeScorers:[], awayScorers:[], events:[], phase:'PRE_GAME', elapsedSeconds:0, clockRunning:false, clockStartedAt:null };
-const PHASES = { SCHEDULED:'PROGRAMADO', PRE_GAME:'PRÉ-JOGO', FIRST_HALF:'1º TEMPO', HALFTIME:'INTERVALO', SECOND_HALF:'2º TEMPO', EXTRA_TIME:'PRORROGAÇÃO', PENALTIES:'PÊNALTIS', FINAL:'FINAL' };
+const PHASES = { SCHEDULED:'PROGRAMADO', PRE_GAME:'PRÉ-JOGO', FIRST_HALF:'1º TEMPO', HALFTIME:'INTERVALO', SECOND_HALF:'2º TEMPO', EXTRA_TIME:'PRORROGAÇÃO', EXTRA_TIME_FIRST_HALF:'1º TEMPO DA PRORROGAÇÃO', EXTRA_TIME_HALFTIME:'INTERVALO DA PRORROGAÇÃO', EXTRA_TIME_SECOND_HALF:'2º TEMPO DA PRORROGAÇÃO', PENALTIES:'PÊNALTIS', FINAL:'FINAL' };
 // Compatibilidade dos testes e documentação: {type:'show',region:'round-scoreboard'} · PUBLICADO · ${payload.length} JOGO(S)
 let state = getOverlayControlState();
 let selectedCollectionId = state.activeCollectionId;

@@ -18,7 +18,7 @@ let filter = 'ALL';
 let showHistoricalEvents = false;
 const MAX_COLUMN_ITEMS = 80;
 let editorial = getEditorialState();
-const livePhases = ['FIRST_HALF', 'SECOND_HALF', 'EXTRA_TIME', 'PENALTIES'];
+const livePhases = ['FIRST_HALF', 'SECOND_HALF', 'EXTRA_TIME','EXTRA_TIME_FIRST_HALF','EXTRA_TIME_HALFTIME','EXTRA_TIME_SECOND_HALF','PENALTIES'];
 const agendaStatuses = ['RECEIVED', 'ANALYSIS', 'PRIORITY', 'SCHEDULED', 'PUBLISHED'];
 
 function club(id) {

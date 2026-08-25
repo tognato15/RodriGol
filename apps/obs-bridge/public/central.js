@@ -5,7 +5,7 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 function club(id){return getClubs().find(c=>c.id===id)||{shortName:'Clube removido',abbreviation:'?',primaryColor:'#284352',secondaryColor:'#fff',crestText:'?'};}
 function crest(c){return `<span class="crest" style="background:${esc(c.primaryColor)};color:${esc(c.secondaryColor)}">${c.crestDataUrl?`<img src="${c.crestDataUrl}" alt="${esc(c.shortName)}">`:esc(c.crestText||c.abbreviation)}</span>`;}
 function coverageFor(m){const fallback={phase:m.status||'PRE_GAME',homeScore:0,awayScore:0,events:[]};const c=readCoverage(m.id,fallback)||fallback;return {...fallback,...c,phase:c.phase||m.status||'PRE_GAME'};}
-function isLive(phase){return ['FIRST_HALF','LIVE_UNKNOWN','SECOND_HALF','EXTRA_TIME','PENALTIES'].includes(phase);}
+function isLive(phase){return ['FIRST_HALF','LIVE_UNKNOWN','SECOND_HALF','EXTRA_TIME','EXTRA_TIME_FIRST_HALF','EXTRA_TIME_HALFTIME','EXTRA_TIME_SECOND_HALF','PENALTIES'].includes(phase);}
 function matchView(m){const h=club(m.homeClubId),a=club(m.awayClubId),c=coverageFor(m),meta=phaseMeta[c.phase]||phaseMeta.PRE_GAME;return{m,h,a,c,meta};}
 function normalizedDate(value){if(!value)return null;const d=new Date(`${value}T12:00:00`);return Number.isNaN(d.getTime())?null:d;}
 function sortMatches(items){return items.sort((x,y)=>{const xc=coverageFor(x),yc=coverageFor(y);if(isLive(xc.phase)!==isLive(yc.phase))return isLive(xc.phase)?-1:1;if(xc.phase==='FINAL'&&yc.phase!=='FINAL')return 1;if(yc.phase==='FINAL'&&xc.phase!=='FINAL')return-1;return `${x.date} ${x.time}`.localeCompare(`${y.date} ${y.time}`);});}

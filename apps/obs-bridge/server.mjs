@@ -82,6 +82,9 @@ function publicPhase(match={},coverage={}){
   if(["HALFTIME","INTERVALO"].includes(raw))return"INTERVALO";
   if(["FIRST_HALF","1º TEMPO","1° TEMPO","PRIMEIRO TEMPO"].includes(raw))return"1º TEMPO";
   if(["SECOND_HALF","2º TEMPO","2° TEMPO","SEGUNDO TEMPO"].includes(raw))return"2º TEMPO";
+  if(["EXTRA_TIME_FIRST_HALF","1º TEMPO DA PRORROGAÇÃO","1° TEMPO DA PRORROGAÇÃO"].includes(raw))return"1º TEMPO DA PRORROGAÇÃO";
+  if(["EXTRA_TIME_HALFTIME","INTERVALO DA PRORROGAÇÃO"].includes(raw))return"INTERVALO DA PRORROGAÇÃO";
+  if(["EXTRA_TIME_SECOND_HALF","2º TEMPO DA PRORROGAÇÃO","2° TEMPO DA PRORROGAÇÃO"].includes(raw))return"2º TEMPO DA PRORROGAÇÃO";
   if(["EXTRA_TIME","PRORROGAÇÃO","PRORROGACAO"].includes(raw))return"PRORROGAÇÃO";
   if(["PENALTIES","PÊNALTIS","PENALTIS"].includes(raw))return"PÊNALTIS";
   if(["LIVE_UNKNOWN","LIVE","IN_PROGRESS","IN_PROGRESS_UNKNOWN","EM ANDAMENTO","EM ANDAMENTO SEM RELÓGIO","EM ANDAMENTO SEM RELOGIO"].includes(raw))return"EM ANDAMENTO";
@@ -175,7 +178,7 @@ function mergeLineupSources(...sources){
   return {home:side('home'),away:side('away')};
 }
 
-function publicPhaseRank(value=''){const phase=String(value||'').trim().toUpperCase();if(['FINAL','FINISHED','CONFIRMED','ARCHIVED','FINALIZADA','FINALIZADO','FIM DE JOGO'].includes(phase))return 90;if(['PENALTIES','PÊNALTIS','PENALTIS'].includes(phase))return 80;if(['EXTRA_TIME','PRORROGAÇÃO','PRORROGACAO'].includes(phase))return 70;if(['SECOND_HALF','2º TEMPO','2° TEMPO','SEGUNDO TEMPO'].includes(phase))return 60;if(['HALFTIME','INTERVALO'].includes(phase))return 50;if(['LIVE_UNKNOWN','LIVE','IN_PROGRESS','IN_PROGRESS_UNKNOWN','EM ANDAMENTO','EM ANDAMENTO SEM RELÓGIO','EM ANDAMENTO SEM RELOGIO'].includes(phase))return 45;if(['FIRST_HALF','1º TEMPO','1° TEMPO','PRIMEIRO TEMPO'].includes(phase))return 40;if(['PRE_GAME','PRE_MATCH','PRÉ-JOGO','PRE-JOGO'].includes(phase))return 20;if(['SCHEDULED','PROGRAMADO','AGENDADO'].includes(phase))return 10;return 0;}
+function publicPhaseRank(value=''){const phase=String(value||'').trim().toUpperCase();if(['FINAL','FINISHED','CONFIRMED','ARCHIVED','FINALIZADA','FINALIZADO','FIM DE JOGO'].includes(phase))return 90;if(['PENALTIES','PÊNALTIS','PENALTIS'].includes(phase))return 80;if(['EXTRA_TIME','EXTRA_TIME_FIRST_HALF','EXTRA_TIME_HALFTIME','EXTRA_TIME_SECOND_HALF','PRORROGAÇÃO','PRORROGACAO','1º TEMPO DA PRORROGAÇÃO','INTERVALO DA PRORROGAÇÃO','2º TEMPO DA PRORROGAÇÃO'].includes(phase))return 70;if(['SECOND_HALF','2º TEMPO','2° TEMPO','SEGUNDO TEMPO'].includes(phase))return 60;if(['HALFTIME','INTERVALO'].includes(phase))return 50;if(['LIVE_UNKNOWN','LIVE','IN_PROGRESS','IN_PROGRESS_UNKNOWN','EM ANDAMENTO','EM ANDAMENTO SEM RELÓGIO','EM ANDAMENTO SEM RELOGIO'].includes(phase))return 45;if(['FIRST_HALF','1º TEMPO','1° TEMPO','PRIMEIRO TEMPO'].includes(phase))return 40;if(['PRE_GAME','PRE_MATCH','PRÉ-JOGO','PRE-JOGO'].includes(phase))return 20;if(['SCHEDULED','PROGRAMADO','AGENDADO'].includes(phase))return 10;return 0;}
 function resolveCanonicalPublicPhase(match={},coverage={},matching=[],baseMatch=null){
   const values=[coverage.phase,match.status,baseMatch?.phase,baseMatch?.status,...matching.flatMap(item=>[item?.phase,item?.period,item?.status,item?.isFinal===true?'FINAL':''])].filter(Boolean);
   return values.sort((a,b)=>publicPhaseRank(b)-publicPhaseRank(a))[0]||'PROGRAMADO';

@@ -6,7 +6,7 @@ import {
 import {deriveVisualState,getEffectiveElapsedSeconds,shouldShowClock} from './match-presentation.js';
 
 const FINAL=new Set(['FINAL','FINISHED','CONFIRMED','ARCHIVED']);
-const LIVE=new Set(['FIRST_HALF','SECOND_HALF','EXTRA_TIME','PENALTIES','LIVE_UNKNOWN']);
+const LIVE=new Set(['FIRST_HALF','SECOND_HALF','EXTRA_TIME','EXTRA_TIME_FIRST_HALF','EXTRA_TIME_HALFTIME','EXTRA_TIME_SECOND_HALF','PENALTIES','LIVE_UNKNOWN']);
 const nowIso=()=>new Date().toISOString();
 const todayKey=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
 const norm=v=>String(v||'').trim().toUpperCase();

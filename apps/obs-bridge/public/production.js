@@ -1,7 +1,7 @@
 import{getClubs,getMatches,getCompetitions,getEditorialState,getNewsState,getTickerState,readCoverage,promoteScheduledMatches,getOperationalMatches,getAgendaState,getActiveJourney,getRounds}from'./data-store.js';
 import{collectOperationalMissions,summarizeOperationalState}from'./operational-missions.js';
 const $=id=>document.getElementById(id);const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const livePhases=new Set(['FIRST_HALF','SECOND_HALF','EXTRA_TIME','PENALTIES','LIVE_UNKNOWN']);
+const livePhases=new Set(['FIRST_HALF','SECOND_HALF','EXTRA_TIME','EXTRA_TIME_FIRST_HALF','EXTRA_TIME_HALFTIME','EXTRA_TIME_SECOND_HALF','PENALTIES','LIVE_UNKNOWN']);
 const phaseMeta={SCHEDULED:['PROGRAMADO','scheduled'],PRE_GAME:['EM OPERAÇÃO','pre'],FIRST_HALF:['1º TEMPO','live'],HALFTIME:['INTERVALO','half'],SECOND_HALF:['2º TEMPO','live'],EXTRA_TIME:['PRORROGAÇÃO','live'],PENALTIES:['PÊNALTIS','live'],LIVE_UNKNOWN:['AO VIVO','live'],FINAL:['FINAL','final']};
 function club(id){return getClubs().find(c=>c.id===id)||{shortName:'Clube removido'};}function coverage(m){return readCoverage(m.id,{phase:m.status||'SCHEDULED',homeScore:0,awayScore:0,events:[]});}function phaseOf(m){return coverage(m).phase||m.status||'SCHEDULED';}function isLive(p){return livePhases.has(p);}function todayKey(){return new Date().toISOString().slice(0,10);}function isToday(m){return m.date===todayKey();}
 function competitionName(m){const c=getCompetitions().find(x=>x.id===m.competitionId);return c?.shortName||c?.name||m.competition||'Sem competição';}function roundName(m){const r=getRounds().find(x=>x.id===m.roundId);return r?.name||m.round||'';}

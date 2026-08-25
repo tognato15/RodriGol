@@ -13,7 +13,7 @@ import { getEffectiveElapsedSeconds } from './match-presentation.js';
 import { recalculateAutomaticStandingsForMatch } from './standings-engine.js';
 
 export const FINAL_PHASES = new Set(['FINAL','FINISHED','CONFIRMED','ARCHIVED']);
-export const LIVE_PHASES = new Set(['FIRST_HALF','LIVE_UNKNOWN','HALFTIME','SECOND_HALF','EXTRA_TIME','PENALTIES']);
+export const LIVE_PHASES = new Set(['FIRST_HALF','LIVE_UNKNOWN','HALFTIME','SECOND_HALF','EXTRA_TIME','EXTRA_TIME_FIRST_HALF','EXTRA_TIME_HALFTIME','EXTRA_TIME_SECOND_HALF','PENALTIES']);
 
 export function canonicalStatus(phase='SCHEDULED') {
   const value=String(phase||'SCHEDULED').toUpperCase();
@@ -58,7 +58,7 @@ export function syncMatchFromCoverage(matchId, coveragePatch={}, options={}) {
 export function transitionMatch(matchId, phase, patch={}) {
   const current=readCoverage(matchId,{homeScore:0,awayScore:0,events:[]})||{};
   const elapsedSeconds=getEffectiveElapsedSeconds(current);
-  const stop=['HALFTIME','FINAL','LIVE_UNKNOWN','PENALTIES'].includes(phase);
+  const stop=['HALFTIME','EXTRA_TIME_HALFTIME','FINAL','LIVE_UNKNOWN','PENALTIES'].includes(phase);
   return syncMatchFromCoverage(matchId,{...current,...patch,phase,elapsedSeconds:stop?elapsedSeconds:(patch.elapsedSeconds??current.elapsedSeconds??0),clockRunning:stop?false:Boolean(patch.clockRunning??current.clockRunning),clockStartedAt:stop?null:(patch.clockStartedAt??current.clockStartedAt)});
 }
 

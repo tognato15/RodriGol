@@ -1,7 +1,7 @@
 import{getCompetitions,getActiveJourney}from'./data-store.js';
 import{collectOperationalSnapshot,collectOperationalMissions,summarizeOperationalState}from'./operational-missions.js';
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const live=new Set(['FIRST_HALF','SECOND_HALF','EXTRA_TIME','PENALTIES','LIVE_UNKNOWN']);
+const live=new Set(['FIRST_HALF','SECOND_HALF','EXTRA_TIME','EXTRA_TIME_FIRST_HALF','EXTRA_TIME_HALFTIME','EXTRA_TIME_SECOND_HALF','PENALTIES','LIVE_UNKNOWN']);
 function statusGroup(r){if(live.has(r.phase))return'LIVE';if(r.phase==='HALFTIME')return'HALFTIME';if(r.final)return'FINAL';return'SCHEDULED'}
 function timeLabel(r){if(r.final)return'FINAL';if(r.phase==='HALFTIME')return'INTERVALO';if(live.has(r.phase))return r.visual.clock||r.visual.period||'AO VIVO';return r.match.date===new Date().toISOString().slice(0,10)?(r.match.time||'PROGRAMADO'):(r.match.date||'PROGRAMADO')}
 function events(snapshot){return snapshot.rows.flatMap(r=>(r.coverage.events||[]).map(e=>({e,r,ts:new Date(e.createdAt||e.updatedAt||0).getTime()}))).filter(x=>x.ts).sort((a,b)=>b.ts-a.ts).slice(0,80)}

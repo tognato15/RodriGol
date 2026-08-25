@@ -35,6 +35,9 @@ const PHASES = {
   HALFTIME: { label: 'INTERVALO', period: 'INTERVALO' },
   SECOND_HALF: { label: 'AO VIVO', period: '2º TEMPO' },
   EXTRA_TIME: { label: 'AO VIVO', period: 'PRORROGAÇÃO' },
+  EXTRA_TIME_FIRST_HALF: { label: 'AO VIVO', period: '1º TEMPO DA PRORROGAÇÃO' },
+  EXTRA_TIME_HALFTIME: { label: 'INTERVALO', period: 'INTERVALO DA PRORROGAÇÃO' },
+  EXTRA_TIME_SECOND_HALF: { label: 'AO VIVO', period: '2º TEMPO DA PRORROGAÇÃO' },
   PENALTIES: { label: 'PÊNALTIS', period: 'PÊNALTIS' },
   FINAL: { label: 'FINALIZADA', period: 'FIM DE JOGO' }
 };
@@ -390,7 +393,7 @@ function saveLineups() {
   }
 }
 function rebuildFromEvents() {
-  let homeScore = 0, awayScore = 0;
+  let homeScore = 0, awayScore = 0, penaltiesHome = 0, penaltiesAway = 0;
   const homeScorers = [], awayScorers = [];
   [...state.events].reverse().forEach(event => {
     if (event.type === 'GOAL') {
@@ -430,7 +433,7 @@ function matchOperationalMeta(item, coverage) {
   const visual = deriveVisualState(item, coverage);
   const phase = String(visual.phase || coverage.phase || item.status || 'SCHEDULED').toUpperCase();
   const final = ['FINAL', 'FINISHED', 'CONFIRMED', 'ARCHIVED'].includes(phase) || Boolean(item.archivedAt);
-  const live = ['FIRST_HALF', 'SECOND_HALF', 'EXTRA_TIME', 'LIVE_UNKNOWN'].includes(phase);
+  const live = ['FIRST_HALF','SECOND_HALF','EXTRA_TIME','EXTRA_TIME_FIRST_HALF','EXTRA_TIME_SECOND_HALF','LIVE_UNKNOWN'].includes(phase);
   const halftime = phase === 'HALFTIME';
   const preGame = phase === 'PRE_GAME';
   const scheduled = phase === 'SCHEDULED';
@@ -518,11 +521,11 @@ function updateClockButton() {
   else { $('startClock').textContent = '▶ Iniciar'; $('startClock').disabled = false; }
 }
 function startClock() {
-  if (state.phase === 'PRE_GAME' || state.phase === 'HALFTIME') state.phase = state.phase === 'PRE_GAME' ? 'FIRST_HALF' : 'SECOND_HALF';
+  if (state.phase === 'PRE_GAME' || state.phase === 'HALFTIME' || state.phase === 'EXTRA_TIME_HALFTIME') state.phase = state.phase === 'PRE_GAME' ? 'FIRST_HALF' : state.phase === 'HALFTIME' ? 'SECOND_HALF' : 'EXTRA_TIME_SECOND_HALF';
   if (state.phase === 'FINAL' || state.clockRunning) return;
   state.clockRunning = true;
   state.clockStartedAt = Date.now();
-  addSystemTimelineEvent(state.phase === 'SECOND_HALF' ? 'SECOND_HALF_START' : 'MATCH_START', state.phase === 'SECOND_HALF' ? 'RECOMEÇOU' : 'COMEÇOU', '▶', phase().period);
+  addSystemTimelineEvent(state.phase === 'SECOND_HALF' ? 'SECOND_HALF_START' : state.phase === 'EXTRA_TIME_SECOND_HALF' ? 'EXTRA_TIME_SECOND_HALF' : 'MATCH_START', state.phase === 'SECOND_HALF' ? 'RECOMEÇOU' : state.phase === 'EXTRA_TIME_SECOND_HALF' ? 'RECOMEÇOU A PRORROGAÇÃO' : 'COMEÇOU', '▶', phase().period);
   saveState(); render(); updateClockButton(); ensureTickTimer(); publishScoreboard().catch(error => log(error.message)); publishStudioLiveUpdate().catch(error => log(error.message)); scheduleStudioSnapshot(5000);
 }
 function renderClockTick() {
@@ -562,18 +565,23 @@ function renderLifecycleFast(){
   renderClockTick(); renderOnAirStatus(); updateClockButton();
 }
 function setPhase(value) {
-  if (state.clockRunning && (value === 'HALFTIME' || value === 'FINAL' || value === 'LIVE_UNKNOWN')) freezeElapsed();
+  if (state.clockRunning && (value === 'HALFTIME' || value === 'EXTRA_TIME_HALFTIME' || value === 'FINAL' || value === 'LIVE_UNKNOWN')) freezeElapsed();
   const previousPhase = state.phase;
   state.phase = value;
-  if (value === 'HALFTIME' || value === 'FINAL' || value === 'LIVE_UNKNOWN') { state.clockRunning = false; stopTickTimer(); }
+  if (value === 'HALFTIME' || value === 'EXTRA_TIME_HALFTIME' || value === 'FINAL' || value === 'LIVE_UNKNOWN') { state.clockRunning = false; stopTickTimer(); }
   if (previousPhase !== value) {
     if (value === 'LIVE_UNKNOWN') addSystemTimelineEvent('MATCH_START_UNKNOWN', 'EM ANDAMENTO', '▶', 'Partida em andamento sem relógio confirmado');
     if (value === 'HALFTIME') addSystemTimelineEvent('HALFTIME', 'INTERVALO', '⏸', 'Fim do primeiro tempo');
     if (value === 'SECOND_HALF') addSystemTimelineEvent('SECOND_HALF', 'SEGUNDO TEMPO', '▶', 'Recomeço da partida');
+    if (value === 'EXTRA_TIME_FIRST_HALF') addSystemTimelineEvent('EXTRA_TIME_FIRST_HALF', '1º TEMPO DA PRORROGAÇÃO', '▶', 'Início da prorrogação');
+    if (value === 'EXTRA_TIME_HALFTIME') addSystemTimelineEvent('EXTRA_TIME_HALFTIME', 'INTERVALO DA PRORROGAÇÃO', '⏸', 'Fim do 1º tempo da prorrogação');
+    if (value === 'EXTRA_TIME_SECOND_HALF') addSystemTimelineEvent('EXTRA_TIME_SECOND_HALF', '2º TEMPO DA PRORROGAÇÃO', '▶', 'Recomeço da prorrogação');
     if (value === 'FINAL') addSystemTimelineEvent('FINAL', 'FIM DE JOGO', '✓', `${home.shortName} ${state.homeScore} × ${state.awayScore} ${away.shortName}`);
   }
   if (value === 'FIRST_HALF' && effectiveElapsed() >= 45 * 60) { state.elapsedSeconds = 0; state.clockStartedAt = state.clockRunning ? Date.now() : null; }
   if (value === 'SECOND_HALF' && effectiveElapsed() < 45 * 60) { state.elapsedSeconds = 45 * 60; state.clockStartedAt = state.clockRunning ? Date.now() : null; }
+  if (value === 'EXTRA_TIME_FIRST_HALF' && effectiveElapsed() < 90 * 60) { state.elapsedSeconds = 90 * 60; state.clockStartedAt = state.clockRunning ? Date.now() : null; }
+  if (value === 'EXTRA_TIME_SECOND_HALF' && effectiveElapsed() < 105 * 60) { state.elapsedSeconds = 105 * 60; state.clockStartedAt = state.clockRunning ? Date.now() : null; }
   if(value==='FINAL'){const result=finishMatch(match.id,state);if(result){match=result.match;state={...state,...result.coverage};}}else{const result=transitionMatch(match.id,value,state);if(result){match=result.match;state={...state,...result.coverage};}}
   renderLifecycleFast(); scheduleDeferredFullRender(500); publishScoreboard().catch(error => log(error.message)); publishStudioLiveUpdate().catch(error => log(error.message)); scheduleStudioSnapshot(5000);
 }

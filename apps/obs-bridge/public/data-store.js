@@ -16,6 +16,7 @@ let remoteHydrationPending = false;
 const clientInstanceId = crypto.randomUUID?.() || `client-${Date.now()}-${Math.random()}`;
 const pendingWideWrites = new Map();
 const remoteRetryQueue = new Map();
+const remoteWriteChains = new Map();
 let remoteRetryTimer = null;
 let remoteConflictDetected = false;
 
@@ -116,12 +117,15 @@ function queueWidePersistence(key, value, deleted=false, syncRemote=true){
   const cfg=runtimeForDataSync();
   if(cfg.remoteStorageEnabled&&syncRemote){
     window.dispatchEvent(new CustomEvent('rodrigol:remote-sync-status',{detail:{key,state:'pending'}}));
-    fetch(`${bridgeBaseForData()}/api/data/${encodeURIComponent(key)}`,{
+    const previous=remoteWriteChains.get(key)||Promise.resolve();
+    const request=previous.catch(()=>{}).then(()=>fetch(`${bridgeBaseForData()}/api/data/${encodeURIComponent(key)}`,{
       method:deleted?'DELETE':'PUT',credentials:'include',headers:authHeadersForData({'Content-Type':'application/json'}),
       body:deleted?undefined:JSON.stringify({value,source:clientInstanceId})
-    }).then(r=>{if(!r.ok)throw new Error(`Servidor respondeu ${r.status}`);return r.json();})
-      .then(result=>{rememberRemoteRevision(result.revision);remoteRetryQueue.delete(key);window.dispatchEvent(new CustomEvent('rodrigol:remote-sync-status',{detail:{key,state:'synced',revision:result.revision}}));})
-      .catch(error=>{queueRemoteRetry(key,value,deleted);window.dispatchEvent(new CustomEvent('rodrigol:remote-sync-status',{detail:{key,state:'retrying',error:error.message}}));window.dispatchEvent(new CustomEvent('rodrigol:remote-storage-error',{detail:{key,error:error.message,retrying:true}}));});
+    })).then(r=>{if(!r.ok)throw new Error(`Servidor respondeu ${r.status}`);return r.json();})
+      .then(result=>{rememberRemoteRevision(result.revision);remoteRetryQueue.delete(key);window.dispatchEvent(new CustomEvent('rodrigol:remote-sync-status',{detail:{key,state:'synced',revision:result.revision}}));return result;})
+      .catch(error=>{queueRemoteRetry(key,value,deleted);window.dispatchEvent(new CustomEvent('rodrigol:remote-sync-status',{detail:{key,state:'retrying',error:error.message}}));window.dispatchEvent(new CustomEvent('rodrigol:remote-storage-error',{detail:{key,error:error.message,retrying:true}}));return null;})
+      .finally(()=>{if(remoteWriteChains.get(key)===request)remoteWriteChains.delete(key);});
+    remoteWriteChains.set(key,request);
   }
 }
 function write(key, value, syncRemote = true) {
@@ -712,7 +716,7 @@ export function getJourneyImpact(journeyOrId){
     const phase=String(readCoverage(m.id,{phase:m.status}).phase||m.status||'SCHEDULED').toUpperCase();
     if(m.archivedAt||phase==='ARCHIVED')buckets.archived++;
     else if(['FINAL','FINISHED','CONFIRMED'].includes(phase))buckets.finished++;
-    else if(['FIRST_HALF','HALFTIME','SECOND_HALF','EXTRA_TIME','PENALTIES','LIVE_UNKNOWN'].includes(phase))buckets.live++;
+    else if(['FIRST_HALF','HALFTIME','SECOND_HALF','EXTRA_TIME','EXTRA_TIME_FIRST_HALF','EXTRA_TIME_HALFTIME','EXTRA_TIME_SECOND_HALF','PENALTIES','LIVE_UNKNOWN'].includes(phase))buckets.live++;
     else if(phase==='SCHEDULED')buckets.scheduled++;
     else buckets.operational++;
   }
