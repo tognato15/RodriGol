@@ -482,8 +482,11 @@ function publicCompetitionHub(id){
     return {...round,stageName:stage?.name||"",stageType:stage?.type||"",stageOrder:Number(stage?.order)||0,groupName:group?.name||"",groupOrder:Number(group?.order)||0};
   }).sort((a,b)=>(a.stageOrder-b.stageOrder)||(a.groupOrder-b.groupOrder)||(a.order-b.order)||String(a.startDate).localeCompare(String(b.startDate))||String(a.name).localeCompare(String(b.name),"pt-BR"));
   const knockoutRaw=publicRecord(PUBLIC_KEYS.knockout,{competitions:{}})||{};
-  const knockout=knockoutRaw.competitions?.[id]||null;
-  return {...competition,standings,matches,rounds,knockout};
+  const rawKnockout=knockoutRaw.competitions?.[id]||null;
+  const clubById=new Map(publicArray(PUBLIC_KEYS.clubs).map(club=>[String(club.id),club]));
+  const knockout=rawKnockout?{...rawKnockout,phases:(rawKnockout.phases||[]).map(phase=>({...phase,ties:(phase.ties||[]).map(tie=>{const homeId=tie.homeClubId||tie.homeId||'',awayId=tie.awayClubId||tie.awayId||'',homeClub=clubById.get(String(homeId)),awayClub=clubById.get(String(awayId));return {...tie,homeClubName:tie.homeClubName||homeClub?.shortName||homeClub?.name||'',awayClubName:tie.awayClubName||awayClub?.shortName||awayClub?.name||'',homeCrest:publicClubAsset(homeId),awayCrest:publicClubAsset(awayId)};})}))}:null;
+  const news=publicNews().filter(article=>(article.competitionIds||[]).map(String).includes(String(id))||String(article.competitionId||'')===String(id));
+  return {...competition,standings,matches,rounds,knockout,news};
 }
 function publicNews(){
   const raw=publicRecord(PUBLIC_KEYS.news,{articles:[]})||{};
@@ -491,7 +494,7 @@ function publicNews(){
   return articles.filter(item=>String(item.status||"").toUpperCase()!=="DRAFT").slice(0,12).map(item=>({
     id:item.id||"",title:item.title||item.headline||"Notícia",summary:item.summary||item.subtitle||"",
     category:item.category||item.competition||"",publishedAt:item.publishedAt||item.createdAt||"",
-    image:item.image||item.imageUrl||""
+    image:item.image||item.imageUrl||"",competitionId:item.competitionId||"",competitionIds:Array.isArray(item.competitionIds)?item.competitionIds:[],clubIds:Array.isArray(item.clubIds)?item.clubIds:[],matchId:item.matchId||""
   }));
 }
 function publicHighlights(){

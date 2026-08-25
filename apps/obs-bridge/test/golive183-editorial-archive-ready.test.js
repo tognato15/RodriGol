@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const portal=fs.readFileSync(new URL('../public/portal/index.html',import.meta.url),'utf8');
+const server=fs.readFileSync(new URL('../server.mjs',import.meta.url),'utf8');
+const newsHtml=fs.readFileSync(new URL('../public/news.html',import.meta.url),'utf8');
+const newsJs=fs.readFileSync(new URL('../public/news.js',import.meta.url),'utf8');
+test('aba Jogos reutiliza o card completo da Home',()=>{assert.match(portal,/competitionGamesMarkup/);assert.match(portal,/matchCard\(match\)/);assert.match(portal,/competition-game-list/)});
+test('mata-mata prioriza fase atual e mostra escudos',()=>{assert.match(portal,/orderedKnockoutPhases/);assert.match(portal,/knockoutClubMarkup/);assert.match(portal,/homeCrest/);assert.match(server,/homeCrest:publicClubAsset/)});
+test('hotsite de competição possui aba Notícias funcional',()=>{assert.match(portal,/data-competition-tab="news"/);assert.match(portal,/competitionNewsMarkup/);assert.match(server,/news=publicNews\(\)\.filter/)});
+test('editor de notícias permite múltiplas competições e clubes',()=>{assert.match(newsHtml,/id="competitionIds" multiple/);assert.match(newsHtml,/id="clubIds" multiple/);assert.match(newsJs,/competitionIds:\[\.\.\.competitionIds\]/);assert.match(newsJs,/clubIds:\[\.\.\.clubIds\]/)});
+test('vínculo com partida também herda competição e clubes',()=>{assert.match(newsJs,/relatedMatch\.competitionId/);assert.match(newsJs,/relatedMatch\.homeClubId/);assert.match(newsJs,/relatedMatch\.awayClubId/)});
