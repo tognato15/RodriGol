@@ -54,3 +54,15 @@ function installStorageGuard(){
  try{const saved=JSON.parse(sessionStorage.getItem('rodrigol-storage-error-v1')||'null');if(saved)show(saved)}catch{}
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installStorageGuard);else installStorageGuard();
+
+
+function installRemoteSyncIndicator(){
+ let node=document.getElementById('rg-sync-indicator');
+ if(!node){node=document.createElement('div');node.id='rg-sync-indicator';node.style.cssText='position:fixed;right:14px;bottom:14px;z-index:99998;padding:7px 10px;border:1px solid #294856;border-radius:999px;background:#07151eef;color:#9fb4bf;font:800 10px Inter,Segoe UI,sans-serif;letter-spacing:.02em;opacity:.86;pointer-events:none;transition:.2s';node.textContent='● DADOS CENTRAIS';document.body.appendChild(node)}
+ let hideTimer=null;
+ const paint=(text,color,sticky=false)=>{node.textContent=text;node.style.color=color;node.style.borderColor=color;node.style.opacity='1';if(hideTimer)clearTimeout(hideTimer);if(!sticky)hideTimer=setTimeout(()=>{node.style.opacity='.55'},2200)};
+ window.addEventListener('rodrigol:remote-sync-status',event=>{const state=event.detail?.state;if(state==='pending')paint('● SINCRONIZANDO…','#ffd166',true);else if(state==='synced')paint('● SINCRONIZADO','#62e98a');else if(state==='retrying')paint('● PENDENTE DE SINCRONIZAÇÃO','#ff9b54',true)});
+ window.addEventListener('rodrigol:remote-storage-error',()=>paint('● ERRO DE SINCRONIZAÇÃO','#ff7777',true));
+ window.addEventListener('rodrigol:remote-hydrated',()=>paint('● DADOS CENTRAIS ATUALIZADOS','#62e98a'));
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installRemoteSyncIndicator);else installRemoteSyncIndicator();

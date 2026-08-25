@@ -22,6 +22,22 @@ export function canonicalStatus(phase='SCHEDULED') {
   return value==='PRE_GAME'?'PRE_GAME':'SCHEDULED';
 }
 
+
+function tieAggregateFromLinkedMatches(tie={}) {
+  const tieHomeId=String(tie.homeClubId||tie.homeId||''),tieAwayId=String(tie.awayClubId||tie.awayId||'');
+  const totals={home:0,away:0};
+  for(const matchId of [tie.firstLegMatchId,tie.secondLegMatchId].filter(Boolean)){
+    const linked=getMatch(matchId); if(!linked) continue;
+    const coverage=readCoverage(matchId,{homeScore:Number(linked.homeScore)||0,awayScore:Number(linked.awayScore)||0})||{};
+    const homeScore=Number(coverage.homeScore??linked.homeScore)||0,awayScore=Number(coverage.awayScore??linked.awayScore)||0;
+    if(String(linked.homeClubId||'')===tieHomeId)totals.home+=homeScore;
+    else if(String(linked.homeClubId||'')===tieAwayId)totals.away+=homeScore;
+    if(String(linked.awayClubId||'')===tieHomeId)totals.home+=awayScore;
+    else if(String(linked.awayClubId||'')===tieAwayId)totals.away+=awayScore;
+  }
+  return totals;
+}
+
 export function syncMatchFromCoverage(matchId, coveragePatch={}, options={}) {
   const match=getMatch(matchId); if(!match) return null;
   const current=readCoverage(matchId,{homeScore:Number(match.homeScore)||0,awayScore:Number(match.awayScore)||0,phase:match.status||'SCHEDULED',events:[]})||{};
@@ -72,8 +88,9 @@ function syncKnockoutForMatch(match,coverage){
     if(tie.singleMatchId===match.id){tie.homeScore=h;tie.awayScore=a;}
     if(tie.firstLegMatchId===match.id){tie.firstLegHomeScore=h;tie.firstLegAwayScore=a;}
     if(tie.secondLegMatchId===match.id){tie.secondLegHomeScore=h;tie.secondLegAwayScore=a;}
-    tie.aggregateHome=(Number(tie.firstLegHomeScore)||0)+(Number(tie.secondLegAwayScore)||0);
-    tie.aggregateAway=(Number(tie.firstLegAwayScore)||0)+(Number(tie.secondLegHomeScore)||0);
+    const aggregate=tieAggregateFromLinkedMatches(tie);
+    tie.aggregateHome=aggregate.home;
+    tie.aggregateAway=aggregate.away;
     const twoLegs=phase.legMode==='TWO_LEGS';
     const matchFinished=id=>{if(!id)return false;const linked=getMatch(id);return linked&&FINAL_PHASES.has(String(linked.status||'').toUpperCase());};
     const tieComplete=twoLegs?Boolean(tie.firstLegMatchId&&tie.secondLegMatchId&&matchFinished(tie.firstLegMatchId)&&matchFinished(tie.secondLegMatchId)):Boolean(tie.singleMatchId&&matchFinished(tie.singleMatchId));

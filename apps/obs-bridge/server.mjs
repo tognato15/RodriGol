@@ -180,6 +180,31 @@ function resolveCanonicalPublicPhase(match={},coverage={},matching=[],baseMatch=
   const values=[coverage.phase,match.status,baseMatch?.phase,baseMatch?.status,...matching.flatMap(item=>[item?.phase,item?.period,item?.status,item?.isFinal===true?'FINAL':''])].filter(Boolean);
   return values.sort((a,b)=>publicPhaseRank(b)-publicPhaseRank(a))[0]||'PROGRAMADO';
 }
+function publicLinkedMatchScore(matchId){
+  const stored=publicArray(PUBLIC_KEYS.matches).find(item=>String(item?.id||'')===String(matchId||''));
+  if(!stored)return null;
+  const coverage=publicCoverage(stored.id),hasCoverage=persistentData.has(`rodrigol-coverage-v1:${stored.id}`);
+  return {
+    id:stored.id,
+    homeClubId:String(stored.homeClubId||''),awayClubId:String(stored.awayClubId||''),
+    home:Number(hasCoverage?coverage.homeScore:stored.homeScore)||0,
+    away:Number(hasCoverage?coverage.awayScore:stored.awayScore)||0,
+    status:publicPhase(stored,coverage)
+  };
+}
+function publicTieSnapshot(tie={}){
+  const tieHomeId=String(tie.homeClubId||tie.homeId||''),tieAwayId=String(tie.awayClubId||tie.awayId||'');
+  const first=publicLinkedMatchScore(tie.firstLegMatchId),second=publicLinkedMatchScore(tie.secondLegMatchId);
+  const totals={home:0,away:0};
+  const add=match=>{if(!match)return;if(match.homeClubId===tieHomeId)totals.home+=match.home;else if(match.homeClubId===tieAwayId)totals.away+=match.home;if(match.awayClubId===tieHomeId)totals.home+=match.away;else if(match.awayClubId===tieAwayId)totals.away+=match.away;};
+  add(first);add(second);
+  const mapped=Boolean(tieHomeId&&tieAwayId&&(first||second));
+  return {
+    firstLeg:first?{home:first.home,away:first.away,matchId:first.id}:null,
+    secondLeg:second?{home:second.home,away:second.away,matchId:second.id}:null,
+    aggregate:mapped?totals:{home:Number(tie.aggregateHome)||0,away:Number(tie.aggregateAway)||0}
+  };
+}
 function publicCanonicalKnockout(matchId,fallback=null){
   const raw=publicRecord('rodrigol-knockout-v1',{competitions:{}})||{};
   for(const model of Object.values(raw.competitions||{})){
@@ -187,12 +212,14 @@ function publicCanonicalKnockout(matchId,fallback=null){
       for(const tie of phase?.ties||[]){
         if(![tie.singleMatchId,tie.firstLegMatchId,tie.secondLegMatchId].map(String).includes(String(matchId)))continue;
         if(phase.legMode!=='TWO_LEGS')return {legMode:'SINGLE',phase:phase.name||'',aggregate:null};
+        const snapshot=publicTieSnapshot(tie),clubs=publicArray(PUBLIC_KEYS.clubs),tieHomeId=String(tie.homeClubId||tie.homeId||''),tieAwayId=String(tie.awayClubId||tie.awayId||''),homeClub=clubs.find(club=>String(club.id)===tieHomeId)||{},awayClub=clubs.find(club=>String(club.id)===tieAwayId)||{};
         return {
           legMode:'TWO_LEGS',phase:phase.name||'',
-          tieHome:fallback?.tieHome||null,tieAway:fallback?.tieAway||null,
-          firstLeg:{home:Number(tie.firstLegHomeScore)||0,away:Number(tie.firstLegAwayScore)||0,matchId:tie.firstLegMatchId||''},
-          secondLeg:{home:Number(tie.secondLegHomeScore)||0,away:Number(tie.secondLegAwayScore)||0,matchId:tie.secondLegMatchId||''},
-          aggregate:{home:Number(tie.aggregateHome)||0,away:Number(tie.aggregateAway)||0},
+          tieHome:tieHomeId?{id:tieHomeId,name:homeClub.shortName||homeClub.name||fallback?.tieHome?.name||'',abbreviation:homeClub.abbreviation||'',crest:publicClubAsset(tieHomeId)}:(fallback?.tieHome||null),
+          tieAway:tieAwayId?{id:tieAwayId,name:awayClub.shortName||awayClub.name||fallback?.tieAway?.name||'',abbreviation:awayClub.abbreviation||'',crest:publicClubAsset(tieAwayId)}:(fallback?.tieAway||null),
+          firstLeg:snapshot.firstLeg||{home:Number(tie.firstLegHomeScore)||0,away:Number(tie.firstLegAwayScore)||0,matchId:tie.firstLegMatchId||''},
+          secondLeg:snapshot.secondLeg||{home:Number(tie.secondLegHomeScore)||0,away:Number(tie.secondLegAwayScore)||0,matchId:tie.secondLegMatchId||''},
+          aggregate:snapshot.aggregate,
           penalties:(Number(tie.penaltiesHome)||Number(tie.penaltiesAway))?{home:Number(tie.penaltiesHome)||0,away:Number(tie.penaltiesAway)||0}:null,
           winnerClubId:tie.winnerClubId||''
         };
@@ -230,6 +257,7 @@ function publicRegionMatch(id,baseMatch=null){
   const preferred=matching[0]||{};
   const matchId=String(preferred.matchId||preferred.id||baseMatch?.id||wanted);
   const coverage=publicCoverage(matchId);
+  const coverageIsAuthoritative=persistentData.has(`rodrigol-coverage-v1:${matchId}`);
 
   const homeName=matching.map(x=>x?.homeName||x?.homeShort).find(Boolean)||baseMatch?.home?.name||"Mandante";
   const awayName=matching.map(x=>x?.awayName||x?.awayShort).find(Boolean)||baseMatch?.away?.name||"Visitante";
@@ -244,11 +272,9 @@ function publicRegionMatch(id,baseMatch=null){
     })
     :[];
 
-  const eventGroups=[
-    Array.isArray(coverage.events)?coverage.events:[],
-    ...matching.map(item=>Array.isArray(item?.chronology)?item.chronology:[]),
-    liveEvents
-  ];
+  const eventGroups=coverageIsAuthoritative
+    ?[Array.isArray(coverage.events)?coverage.events:[]]
+    :[...matching.map(item=>Array.isArray(item?.chronology)?item.chronology:[]),liveEvents];
   const events=mergeUniquePublicEvents(eventGroups);
 
   const lineups=mergeLineupSources(
@@ -313,8 +339,8 @@ function publicRegionMatch(id,baseMatch=null){
       away:Number(coverage.penaltiesAway??firstValue(x=>x?.penaltiesAway,baseMatch?.penalties?.away??0))||0
     },
     scorers:{
-      home:Array.isArray(coverage.homeScorers)&&coverage.homeScorers.length?coverage.homeScorers:firstValue(x=>Array.isArray(x?.homeGoals)&&x.homeGoals.length?x.homeGoals:null,baseMatch?.scorers?.home||[]),
-      away:Array.isArray(coverage.awayScorers)&&coverage.awayScorers.length?coverage.awayScorers:firstValue(x=>Array.isArray(x?.awayGoals)&&x.awayGoals.length?x.awayGoals:null,baseMatch?.scorers?.away||[])
+      home:coverageIsAuthoritative&&Array.isArray(coverage.homeScorers)?coverage.homeScorers:firstValue(x=>Array.isArray(x?.homeGoals)&&x.homeGoals.length?x.homeGoals:null,baseMatch?.scorers?.home||[]),
+      away:coverageIsAuthoritative&&Array.isArray(coverage.awayScorers)?coverage.awayScorers:firstValue(x=>Array.isArray(x?.awayGoals)&&x.awayGoals.length?x.awayGoals:null,baseMatch?.scorers?.away||[])
     },
     clock:{
       elapsedSeconds:Number(firstValue(x=>x?.elapsedSeconds,coverage.elapsedSeconds??baseMatch?.clock?.elapsedSeconds??0))||0,
@@ -330,7 +356,7 @@ function publicRegionMatch(id,baseMatch=null){
       venue:firstValue(x=>x?.venue,coverage.venue||baseMatch?.facts?.venue||baseMatch?.venue||"")
     },
     lineups,
-    events:events.length?events:(baseMatch?.events||[])
+    events:coverageIsAuthoritative?events:(events.length?events:(baseMatch?.events||[]))
   };
 }
 
@@ -350,7 +376,7 @@ function mergePublicMatch(base={},live=null){
       home:{...(base.lineups?.home||{}),...(live.lineups?.home||{})},
       away:{...(base.lineups?.away||{}),...(live.lineups?.away||{})}
     },
-    events:Array.isArray(live.events)&&live.events.length?live.events:(base.events||[])
+    events:Array.isArray(live.events)?live.events:(base.events||[])
   };
 }
 function publicMatchesForDate(date){
@@ -484,7 +510,7 @@ function publicCompetitionHub(id){
   const knockoutRaw=publicRecord(PUBLIC_KEYS.knockout,{competitions:{}})||{};
   const rawKnockout=knockoutRaw.competitions?.[id]||null;
   const clubById=new Map(publicArray(PUBLIC_KEYS.clubs).map(club=>[String(club.id),club]));
-  const knockout=rawKnockout?{...rawKnockout,phases:(rawKnockout.phases||[]).map(phase=>({...phase,ties:(phase.ties||[]).map(tie=>{const homeId=tie.homeClubId||tie.homeId||'',awayId=tie.awayClubId||tie.awayId||'',homeClub=clubById.get(String(homeId)),awayClub=clubById.get(String(awayId));return {...tie,homeClubName:tie.homeClubName||homeClub?.shortName||homeClub?.name||'',awayClubName:tie.awayClubName||awayClub?.shortName||awayClub?.name||'',homeCrest:publicClubAsset(homeId),awayCrest:publicClubAsset(awayId)};})}))}:null;
+  const knockout=rawKnockout?{...rawKnockout,phases:(rawKnockout.phases||[]).map(phase=>({...phase,ties:(phase.ties||[]).map(tie=>{const homeId=tie.homeClubId||tie.homeId||'',awayId=tie.awayClubId||tie.awayId||'',homeClub=clubById.get(String(homeId)),awayClub=clubById.get(String(awayId)),snapshot=phase.legMode==='TWO_LEGS'?publicTieSnapshot(tie):null;return {...tie,...(snapshot?{aggregateHome:snapshot.aggregate.home,aggregateAway:snapshot.aggregate.away}:{}),homeClubName:tie.homeClubName||homeClub?.shortName||homeClub?.name||'',awayClubName:tie.awayClubName||awayClub?.shortName||awayClub?.name||'',homeCrest:publicClubAsset(homeId),awayCrest:publicClubAsset(awayId)};})}))}:null;
   const news=publicNews().filter(article=>(article.competitionIds||[]).map(String).includes(String(id))||String(article.competitionId||'')===String(id));
   return {...competition,standings,matches,rounds,knockout,news};
 }

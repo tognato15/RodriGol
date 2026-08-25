@@ -97,29 +97,31 @@ async function flushRemoteRetries(){
   remoteRetryTimer=null;
   const cfg=runtimeForDataSync();if(!cfg.remoteStorageEnabled||!remoteRetryQueue.size)return;
   for(const [key,item] of [...remoteRetryQueue]){
-    try{const response=await fetch(`${bridgeBaseForData()}/api/data/${encodeURIComponent(key)}`,{method:item.deleted?'DELETE':'PUT',credentials:'include',headers:authHeadersForData({'Content-Type':'application/json'}),body:item.deleted?undefined:JSON.stringify({value:item.value,source:clientInstanceId})});if(!response.ok)throw new Error(`Servidor respondeu ${response.status}`);const result=await response.json();rememberRemoteRevision(result.revision);remoteRetryQueue.delete(key);}
+    try{const response=await fetch(`${bridgeBaseForData()}/api/data/${encodeURIComponent(key)}`,{method:item.deleted?'DELETE':'PUT',credentials:'include',headers:authHeadersForData({'Content-Type':'application/json'}),body:item.deleted?undefined:JSON.stringify({value:item.value,source:clientInstanceId})});if(!response.ok)throw new Error(`Servidor respondeu ${response.status}`);const result=await response.json();rememberRemoteRevision(result.revision);remoteRetryQueue.delete(key);window.dispatchEvent(new CustomEvent('rodrigol:remote-sync-status',{detail:{key,state:'synced',revision:result.revision,retried:true}}));}
     catch(error){item.attempts+=1;remoteRetryQueue.set(key,item);window.dispatchEvent(new CustomEvent('rodrigol:remote-storage-error',{detail:{key,error:error.message,retrying:true,attempts:item.attempts}}));}
   }
   if(remoteRetryQueue.size)remoteRetryTimer=setTimeout(flushRemoteRetries,Math.min(15000,2000+remoteRetryQueue.size*500));
 }
 function queueWidePersistence(key, value, deleted=false, syncRemote=true){
-  if (!wideDataDb) return;
-  const operation = new Promise((resolve,reject)=>{
-    const tx=wideDataDb.transaction(WIDE_DATA_STORE,'readwrite');
-    const store=tx.objectStore(WIDE_DATA_STORE);
-    deleted?store.delete(key):store.put(value,key);
-    tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error);
-  }).catch(error=>reportStorageError(key,error));
-  pendingWideWrites.set(key,operation);
-  operation.finally(()=>{if(pendingWideWrites.get(key)===operation)pendingWideWrites.delete(key);});
+  if(wideDataDb){
+    const operation = new Promise((resolve,reject)=>{
+      const tx=wideDataDb.transaction(WIDE_DATA_STORE,'readwrite');
+      const store=tx.objectStore(WIDE_DATA_STORE);
+      deleted?store.delete(key):store.put(value,key);
+      tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error);
+    }).catch(error=>reportStorageError(key,error));
+    pendingWideWrites.set(key,operation);
+    operation.finally(()=>{if(pendingWideWrites.get(key)===operation)pendingWideWrites.delete(key);});
+  }
   const cfg=runtimeForDataSync();
   if(cfg.remoteStorageEnabled&&syncRemote){
+    window.dispatchEvent(new CustomEvent('rodrigol:remote-sync-status',{detail:{key,state:'pending'}}));
     fetch(`${bridgeBaseForData()}/api/data/${encodeURIComponent(key)}`,{
       method:deleted?'DELETE':'PUT',credentials:'include',headers:authHeadersForData({'Content-Type':'application/json'}),
       body:deleted?undefined:JSON.stringify({value,source:clientInstanceId})
     }).then(r=>{if(!r.ok)throw new Error(`Servidor respondeu ${r.status}`);return r.json();})
-      .then(result=>{rememberRemoteRevision(result.revision);remoteRetryQueue.delete(key);})
-      .catch(error=>{queueRemoteRetry(key,value,deleted);window.dispatchEvent(new CustomEvent('rodrigol:remote-storage-error',{detail:{key,error:error.message,retrying:true}}));});
+      .then(result=>{rememberRemoteRevision(result.revision);remoteRetryQueue.delete(key);window.dispatchEvent(new CustomEvent('rodrigol:remote-sync-status',{detail:{key,state:'synced',revision:result.revision}}));})
+      .catch(error=>{queueRemoteRetry(key,value,deleted);window.dispatchEvent(new CustomEvent('rodrigol:remote-sync-status',{detail:{key,state:'retrying',error:error.message}}));window.dispatchEvent(new CustomEvent('rodrigol:remote-storage-error',{detail:{key,error:error.message,retrying:true}}));});
   }
 }
 function write(key, value, syncRemote = true) {
@@ -237,13 +239,17 @@ async function reconcileRemoteSnapshot(snapshot={}){
 async function hydrateRemoteData(){
   const cfg=runtimeForDataSync(); if(!cfg.remoteStorageEnabled)return;
   try{
-    const suffix=remoteDataRevision?`?since=${encodeURIComponent(remoteDataRevision)}`:'';
+    const coreMissing=!wideDataCache.has(MATCHES_KEY)||!wideDataCache.has(CLUBS_KEY)||!wideDataCache.has(COMPETITIONS_KEY);
+    const since=coreMissing?0:remoteDataRevision;
+    const suffix=since?`?since=${encodeURIComponent(since)}`:'';
     const response=await fetch(`${bridgeBaseForData()}/api/data/snapshot${suffix}`,{credentials:'include',headers:authHeadersForData()});
     if(!response.ok)throw new Error(`Servidor respondeu ${response.status}`);
-    const snapshot=await response.json(); rememberRemoteRevision(snapshot.revision);
-    if(snapshot.unchanged)return true;
-    await reconcileRemoteSnapshot(snapshot);
-  }catch(error){window.dispatchEvent(new CustomEvent('rodrigol:remote-storage-error',{detail:{error:error.message}}));}
+    const snapshot=await response.json();
+    if(snapshot.unchanged){rememberRemoteRevision(snapshot.revision);return true;}
+    const reconciled=await reconcileRemoteSnapshot(snapshot);
+    if(reconciled!==false)rememberRemoteRevision(snapshot.revision);
+    return reconciled;
+  }catch(error){window.dispatchEvent(new CustomEvent('rodrigol:remote-storage-error',{detail:{error:error.message}}));return false;}
 }
 async function pollRemoteData(){
   const cfg=runtimeForDataSync(); if(!cfg.remoteStorageEnabled||document.hidden)return;
@@ -252,13 +258,13 @@ async function pollRemoteData(){
     if(!response.ok)return;
     const snapshot=await response.json();
     if(snapshot.unchanged||(Number(snapshot.revision)||0)<=remoteDataRevision)return;
-    rememberRemoteRevision(snapshot.revision);
-    await reconcileRemoteSnapshot(snapshot);
+    const reconciled=await reconcileRemoteSnapshot(snapshot);
+    if(reconciled!==false)rememberRemoteRevision(snapshot.revision);
   }catch{}
 }
 await loadWideData().catch(error=>reportStorageError('wide-data',error));
 remoteHydrationPending=runtimeForDataSync().remoteStorageEnabled;
-const remoteHydrationPromise=new Promise(resolve=>setTimeout(resolve,800)).then(()=>hydrateRemoteData()).finally(()=>{remoteHydrationPending=false;window.dispatchEvent(new CustomEvent('rodrigol:remote-hydrated',{detail:{revision:remoteDataRevision}}));});
+const remoteHydrationPromise=new Promise(resolve=>setTimeout(resolve,150)).then(()=>hydrateRemoteData()).finally(()=>{remoteHydrationPending=false;window.dispatchEvent(new CustomEvent('rodrigol:remote-hydrated',{detail:{revision:remoteDataRevision}}));});
 let remoteDataSocket=null;
 function applyRemoteDataEnvelope(envelope={}){
   if(envelope.type==='data-patch'){
@@ -296,7 +302,7 @@ function startRemoteDataSocket(){
 }
 startRemoteDataSocket();
 // WebSocket é o caminho principal. Polling permanece apenas como rede de segurança.
-setInterval(pollRemoteData,60000);
+setInterval(pollRemoteData,10000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollRemoteData();});
 async function loadClubCrests(){if(!assetDb)return;await new Promise((resolve,reject)=>{const tx=assetDb.transaction(CLUB_ASSET_STORE,'readonly'),store=tx.objectStore(CLUB_ASSET_STORE),req=store.openCursor();req.onsuccess=()=>{const cursor=req.result;if(cursor){clubCrestCache.set(String(cursor.key),cursor.value||'');cursor.continue();}else resolve();};req.onerror=()=>reject(req.error);});}
 async function setClubCrest(id,value){await putAssetLocal(CLUB_ASSET_STORE,id,value||'');queueRemoteAsset('club',id,value||'');}
@@ -322,14 +328,16 @@ export function getMatches(){if(!has(MATCHES_KEY)){if(remoteHydrationPending)ret
 export function saveMatches(matches) { return write(MATCHES_KEY, matches); }
 function queueRemoteRecordPatch(kind,id,value){
   const cfg=runtimeForDataSync(); if(!cfg.remoteStorageEnabled)return;
+  const key=kind==='match'?MATCHES_KEY:HISTORY_KEY;
+  window.dispatchEvent(new CustomEvent('rodrigol:remote-sync-status',{detail:{key,state:'pending',recordId:id}}));
   fetch(`${bridgeBaseForData()}/api/data-patch/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`,{
     method:'PATCH',credentials:'include',headers:authHeadersForData({'Content-Type':'application/json'}),
     body:JSON.stringify({value,source:clientInstanceId})
   }).then(r=>{if(!r.ok)throw new Error(`Servidor respondeu ${r.status}`);return r.json();})
-    .then(result=>{rememberRemoteRevision(result.revision);})
-    .catch(()=>{ // fallback seguro: a fila tradicional reenviará a coleção completa
-      const key=kind==='match'?MATCHES_KEY:HISTORY_KEY;
+    .then(result=>{rememberRemoteRevision(result.revision);window.dispatchEvent(new CustomEvent('rodrigol:remote-sync-status',{detail:{key,state:'synced',revision:result.revision,recordId:id}}));})
+    .catch(error=>{ // fallback seguro: a fila tradicional reenviará a coleção completa
       queueRemoteRetry(key,wideDataCache.get(key),false);
+      window.dispatchEvent(new CustomEvent('rodrigol:remote-sync-status',{detail:{key,state:'retrying',error:error.message,recordId:id}}));
     });
 }
 export function upsertMatch(match) { const matches = getMatches(); const index = matches.findIndex(item => item.id === match.id); if (index >= 0) matches[index] = match; else matches.push(match); write(MATCHES_KEY,matches,false); queueRemoteRecordPatch('match',match.id,match); return matches; }
