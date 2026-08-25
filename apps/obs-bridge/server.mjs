@@ -431,6 +431,14 @@ function publicStandings(){
     }))
   }));
 }
+function publicContinentLabel(value="") {
+  const raw=String(value||"").trim();
+  const key=raw.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();
+  if(["AMERICA","AMERICA DO SUL","SOUTH AMERICA","SOUTH_AMERICA"].includes(key))return "América do Sul";
+  if(["EUROPA","EUROPE"].includes(key))return "Europa";
+  if(["AMERICA DO NORTE","NORTH AMERICA","NORTH_AMERICA"].includes(key))return "América do Norte";
+  return raw;
+}
 function publicCompetitions(){
   const standings=publicStandings(),matches=publicArray(PUBLIC_KEYS.matches);
   return publicArray(PUBLIC_KEYS.competitions).map(item=>{
@@ -442,7 +450,7 @@ function publicCompetitions(){
     const matchCount=matches.filter(match=>String(match.competitionId)===String(item.id)).length;
     return {
       id:item.id||"",name:item.name||"Competição",shortName:item.shortName||item.name||"Competição",abbreviation:item.abbreviation||"",
-      season:item.season||"",format:item.format||"",country:item.country||"",continent:item.continent||"",priority:Number(item.priority)||999,featured:item.featured===true,
+      season:item.season||"",format:item.format||"",country:item.country||"",continent:publicContinentLabel(item.continent||""),priority:Number(item.priority)||999,featured:item.featured===true,
       logo:publicCompetitionAsset(item.id),tableCount,matchCount,hasStandings:tableCount>0,stages
     };
   }).sort((a,b)=>(b.featured-a.featured)||(a.priority-b.priority)||String(a.continent).localeCompare(String(b.continent),"pt-BR")||String(a.country).localeCompare(String(b.country),"pt-BR")||String(a.name).localeCompare(String(b.name),"pt-BR"));
@@ -466,7 +474,13 @@ function publicCompetitionHub(id){
     let round=fallbackRounds.find(item=>item.name===label);if(!round){round={id:`label:${label}`,name:label,order:fallbackRounds.length+1000,stageId:"",groupId:"",startDate:match.date||"",endDate:match.date||"",matchIds:[]};fallbackRounds.push(round);}
     round.matchIds.push(match.id);
   }
-  const rounds=[...storedRounds,...fallbackRounds].filter(round=>round.matchIds.length).sort((a,b)=>(a.order-b.order)||String(a.startDate).localeCompare(String(b.startDate))||String(a.name).localeCompare(String(b.name),"pt-BR"));
+  const stageById=new Map((competition.stages||[]).map(stage=>[String(stage.id),stage]));
+  const groupById=new Map((competition.stages||[]).flatMap(stage=>(stage.groups||[]).map(group=>[String(group.id),group])));
+  const rounds=[...storedRounds,...fallbackRounds].filter(round=>round.matchIds.length).map(round=>{
+    const stage=stageById.get(String(round.stageId||""));
+    const group=groupById.get(String(round.groupId||""));
+    return {...round,stageName:stage?.name||"",stageType:stage?.type||"",stageOrder:Number(stage?.order)||0,groupName:group?.name||"",groupOrder:Number(group?.order)||0};
+  }).sort((a,b)=>(a.stageOrder-b.stageOrder)||(a.groupOrder-b.groupOrder)||(a.order-b.order)||String(a.startDate).localeCompare(String(b.startDate))||String(a.name).localeCompare(String(b.name),"pt-BR"));
   const knockoutRaw=publicRecord(PUBLIC_KEYS.knockout,{competitions:{}})||{};
   const knockout=knockoutRaw.competitions?.[id]||null;
   return {...competition,standings,matches,rounds,knockout};
