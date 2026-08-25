@@ -387,21 +387,31 @@ function publicMatchesForDate(date){
 }
 function publicStandings(){
   const raw=publicRecord(PUBLIC_KEYS.standings,{tables:{},tableMeta:{},publishedTableIds:[]})||{};
-  const competitions=publicArray(PUBLIC_KEYS.competitions);
+  const competitions=publicArray(PUBLIC_KEYS.competitions),clubs=publicArray(PUBLIC_KEYS.clubs);
   const tableIds=Array.isArray(raw.publishedTableIds)&&raw.publishedTableIds.length?raw.publishedTableIds:Object.keys(raw.tables||{});
   const stored=tableIds.map(tableId=>{
     const meta=raw.tableMeta?.[tableId]||{};
     const competition=competitions.find(c=>String(c.id)===String(meta.competitionId||tableId))||{};
+    const stages=Array.isArray(competition.stages)?competition.stages:[];
+    const stage=stages.find(item=>String(item.id)===String(meta.stageId||''))||{};
+    const group=(Array.isArray(stage.groups)?stage.groups:[]).find(item=>String(item.id)===String(meta.groupId||''))||{};
     const rows=Array.isArray(raw.tables?.[tableId])?raw.tables[tableId]:[];
     return {
       id:tableId,name:meta.name||competition.shortName||competition.name||"Classificação",
-      competition:competition.name||meta.competitionName||"",competitionId:competition.id||meta.competitionId||"",
+      label:meta.label||meta.name||"Classificação",competition:competition.name||meta.competitionName||"",
+      competitionId:competition.id||meta.competitionId||"",season:meta.season||competition.season||"",format:competition.format||"",
+      stageId:meta.stageId||"",stageName:stage.name||"",stageType:stage.type||"",groupId:meta.groupId||"",groupName:group.name||"",
       logo:publicCompetitionAsset(competition.id||meta.competitionId),
-      rows:rows.slice(0,20).map((row,index)=>({
-        position:Number(row.position)||index+1,clubId:row.clubId||"",clubName:row.clubName||row.name||"Clube",
-        played:Number(row.played)||0,wins:Number(row.wins)||0,draws:Number(row.draws)||0,losses:Number(row.losses)||0,
-        goalDifference:Number(row.goalDifference)||0,points:Number(row.points)||0
-      }))
+      rows:rows.slice(0,40).map((row,index)=>{
+        const club=clubs.find(item=>String(item.id)===String(row.clubId||''))||{};
+        const goalsFor=Number(row.goalsFor??row.gf)||0,goalsAgainst=Number(row.goalsAgainst??row.ga)||0;
+        return {
+          position:Number(row.position)||index+1,clubId:row.clubId||"",clubName:row.clubName||row.name||club.shortName||club.name||"Clube",
+          abbreviation:club.abbreviation||"",crest:publicClubAsset(row.clubId||club.id),
+          played:Number(row.played)||0,wins:Number(row.wins)||0,draws:Number(row.draws)||0,losses:Number(row.losses)||0,
+          goalsFor,goalsAgainst,goalDifference:Number(row.goalDifference??(goalsFor-goalsAgainst))||0,points:Number(row.points)||0
+        };
+      })
     };
   }).filter(table=>table.rows.length);
   if(stored.length)return stored;
@@ -409,14 +419,31 @@ function publicStandings(){
   const panels=Array.isArray(sidebar?.panels)?sidebar.panels:[];
   return panels.filter(panel=>panel.type==="standings"&&Array.isArray(panel.items)).map(panel=>({
     id:panel.key||panel.competitionId||panel.title,
-    name:panel.subtitle||panel.title||"Classificação",
-    competition:panel.title||"",competitionId:panel.competitionId||"",logo:"",
-    rows:panel.items.slice(0,20).map((row,index)=>({
-      position:Number(row.position)||index+1,clubId:row.clubId||"",clubName:row.name||row.clubName||"Clube",
+    name:panel.subtitle||panel.title||"Classificação",label:panel.subtitle||panel.title||"Classificação",
+    competition:panel.title||"",competitionId:panel.competitionId||"",season:"",format:"",stageId:"",stageName:"",stageType:"",groupId:"",groupName:"",logo:"",
+    rows:panel.items.slice(0,40).map((row,index)=>({
+      position:Number(row.position)||index+1,clubId:row.clubId||"",clubName:row.name||row.clubName||"Clube",abbreviation:"",crest:publicClubAsset(row.clubId),
       played:Number(row.played)||0,wins:Number(row.wins)||0,draws:Number(row.draws)||0,losses:Number(row.losses)||0,
-      goalDifference:Number(row.goalDifference)||0,points:Number(row.points)||0
+      goalsFor:Number(row.goalsFor)||0,goalsAgainst:Number(row.goalsAgainst)||0,goalDifference:Number(row.goalDifference)||0,points:Number(row.points)||0
     }))
   }));
+}
+function publicCompetitions(){
+  const standings=publicStandings(),publishedIds=new Set(standings.map(table=>String(table.competitionId||'')));
+  return publicArray(PUBLIC_KEYS.competitions).filter(item=>publishedIds.has(String(item.id))).map(item=>({
+    id:item.id||"",name:item.name||"Competição",shortName:item.shortName||item.name||"Competição",abbreviation:item.abbreviation||"",
+    season:item.season||"",format:item.format||"",country:item.country||"",logo:publicCompetitionAsset(item.id),
+    tableCount:standings.filter(table=>String(table.competitionId)===String(item.id)).length
+  }));
+}
+function publicCompetitionHub(id){
+  const competition=publicCompetitions().find(item=>String(item.id)===String(id));
+  if(!competition)return null;
+  const standings=publicStandings().filter(table=>String(table.competitionId)===String(id));
+  const matches=publicArray(PUBLIC_KEYS.matches).filter(item=>String(item.competitionId)===String(id)).map(item=>{
+    const base=publicMatch(item),live=publicRegionMatch(item.id,base);return mergePublicMatch(base,live);
+  }).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||String(a.time||'').localeCompare(String(b.time||'')));
+  return {...competition,standings,matches:matches.slice(0,24)};
 }
 function publicNews(){
   const raw=publicRecord(PUBLIC_KEYS.news,{articles:[]})||{};
@@ -672,6 +699,8 @@ const server=createServer(async(request,response)=>{
     json(response,200,{ok:true,generatedAt:new Date().toISOString(),match});return;
   }
   if(pathname==="/api/public/standings"&&request.method==="GET"){json(response,200,{ok:true,generatedAt:new Date().toISOString(),standings:publicStandings()});return;}
+  if(pathname==="/api/public/competitions"&&request.method==="GET"){json(response,200,{ok:true,generatedAt:new Date().toISOString(),competitions:publicCompetitions()});return;}
+  if(pathname.startsWith("/api/public/competitions/")&&request.method==="GET"){const id=decodeURIComponent(pathname.slice("/api/public/competitions/".length));const competition=publicCompetitionHub(id);if(!competition){json(response,404,{ok:false,error:"Competição não encontrada ou sem classificação publicada."});return;}json(response,200,{ok:true,generatedAt:new Date().toISOString(),competition});return;}
   if(pathname==="/api/public/news"&&request.method==="GET"){json(response,200,{ok:true,generatedAt:new Date().toISOString(),news:publicNews()});return;}
   if(pathname==="/api/data/status"&&request.method==="GET"){if(!requireAuth(request,response))return;const backups=await listBackupFiles();json(response,200,{ok:true,environment,dataRoot,revision:dataRevision,records:persistentData.size,lastSavedAt:lastDataSavedAt,lastBackupAt,automaticBackups:backups.length});return;}
   if(pathname==="/api/data/import-backup"&&request.method==="POST"){
