@@ -570,10 +570,13 @@ function broadcast(command,source="api"){
   else notifyPublicEvent("command",{region:command.region});
   return envelope;
 }
+function publicEventLabel(event={}){const type=String(event.type||'').toUpperCase();if(type==='GOAL'||type==='GOL')return'GOL';if(type==='YELLOW_CARD')return'CARTÃO AMARELO';if(type==='RED_CARD')return'CARTÃO VERMELHO';if(type==='SUBSTITUTION')return'SUBSTITUIÇÃO';if(type==='HALFTIME')return'INTERVALO';if(type==='MATCH_START'||type==='MATCH_START_UNKNOWN')return'INÍCIO DE JOGO';if(type==='SECOND_HALF'||type==='SECOND_HALF_START'||type==='RESTART')return'INÍCIO DO 2º TEMPO';if(type==='PENALTY_SCORED')return'PÊNALTI CONVERTIDO';if(type==='PENALTY_MISSED')return'PÊNALTI PERDIDO';if(type==='FINAL'||type==='END')return'FIM DE JOGO';return String(event.label||event.type||'INFORMAÇÃO').replaceAll('_',' ')}
+function compactCanonicalAction(event={}){if(!event||!Object.keys(event).length)return'';const label=publicEventLabel(event),player=String(event.player||event.author||'').trim(),minute=Number(event.minute)||0;return [label,player,minute?`${minute}'`:''].filter(Boolean).join(' · ')}
 function canonicalOverlayMatch(match={}){
   const phase=String(match.phase||match.status||'PROGRAMADO');
   const beforeKickoff=publicPhaseRank(phase)<=20;
   const isFinal=publicPhaseRank(phase)>=90;
+  const latest=Array.isArray(match.events)&&match.events.length?match.events[0]:null;
   const crestPayload=(team={})=>({image:typeof team.crest==='string'?team.crest:'',text:team.abbreviation||String(team.name||'?').slice(0,3).toUpperCase(),background:'#18394a',color:'#fff'});
   return {
     matchId:match.id,competition:match.competition||'',competitionShort:'',date:match.date||'',time:match.time||'',round:match.round||'',roundId:match.roundId||'',
@@ -583,6 +586,7 @@ function canonicalOverlayMatch(match={}){
     homeGoals:(match.scorers?.home||[]).map(scorer=>({minute:String(scorer).match(/\d+(?:\+\d+)?/)?.[0]||'',player:String(scorer).replace(/^\s*\d+(?:\+\d+)?[’'º°]?\s*/,'').trim()||'Gol'})),
     awayGoals:(match.scorers?.away||[]).map(scorer=>({minute:String(scorer).match(/\d+(?:\+\d+)?/)?.[0]||'',player:String(scorer).replace(/^\s*\d+(?:\+\d+)?[’'º°]?\s*/,'').trim()||'Gol'})),
     phase,status:phase,period:phase,beforeKickoff,isFinal,clockVisible:match.clock?.visible!==false,elapsedSeconds:Number(match.clock?.elapsedSeconds)||0,clockRunning:Boolean(match.clock?.running),clockStartedAt:match.clock?.startedAt||null,
+    latestAction:compactCanonicalAction(latest),latestScoreboardAction:compactCanonicalAction(latest),
     chronology:Array.isArray(match.events)?match.events:[],lineups:match.lineups||{},venue:match.facts?.venue||match.venue||'',referee:match.facts?.referee||'',attendance:match.facts?.attendance||'',weather:match.facts?.weather||'',knockout:match.knockout||null,stateRevision:Number(match.stateRevision)||0
   };
 }
