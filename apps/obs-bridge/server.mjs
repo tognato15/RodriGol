@@ -75,14 +75,14 @@ function publicClubAsset(id){return publicRecord(`rodrigol-asset-club-crest:${id
 function publicCompetitionAsset(id){return publicRecord(`rodrigol-asset-competition-logo:${id}`,"")||"";}
 function publicDate(value){return /^\d{4}-\d{2}-\d{2}$/.test(String(value||""))?String(value):new Date().toISOString().slice(0,10);}
 function publicPhase(match={},coverage={}){
-  const raw=String(coverage.phase||match.status||"SCHEDULED").toUpperCase();
-  if(["FINAL","FINISHED","CONFIRMED","ARCHIVED"].includes(raw))return"FINAL";
-  if(["HALFTIME"].includes(raw))return"INTERVALO";
-  if(["FIRST_HALF"].includes(raw))return"1º TEMPO";
-  if(["SECOND_HALF"].includes(raw))return"2º TEMPO";
-  if(["EXTRA_TIME"].includes(raw))return"PRORROGAÇÃO";
-  if(["PENALTIES"].includes(raw))return"PÊNALTIS";
-  if(["LIVE_UNKNOWN","LIVE","IN_PROGRESS","IN_PROGRESS_UNKNOWN"].includes(raw))return"EM ANDAMENTO";
+  const raw=String(coverage.phase||match.status||"SCHEDULED").trim().toUpperCase();
+  if(["FINAL","FINISHED","CONFIRMED","ARCHIVED","FINALIZADA","FINALIZADO","FIM DE JOGO"].includes(raw))return"FINAL";
+  if(["HALFTIME","INTERVALO"].includes(raw))return"INTERVALO";
+  if(["FIRST_HALF","1º TEMPO","1° TEMPO","PRIMEIRO TEMPO"].includes(raw))return"1º TEMPO";
+  if(["SECOND_HALF","2º TEMPO","2° TEMPO","SEGUNDO TEMPO"].includes(raw))return"2º TEMPO";
+  if(["EXTRA_TIME","PRORROGAÇÃO","PRORROGACAO"].includes(raw))return"PRORROGAÇÃO";
+  if(["PENALTIES","PÊNALTIS","PENALTIS"].includes(raw))return"PÊNALTIS";
+  if(["LIVE_UNKNOWN","LIVE","IN_PROGRESS","IN_PROGRESS_UNKNOWN","EM ANDAMENTO","EM ANDAMENTO SEM RELÓGIO","EM ANDAMENTO SEM RELOGIO"].includes(raw))return"EM ANDAMENTO";
   return"PROGRAMADO";
 }
 function publicMatch(match={}){
@@ -173,7 +173,7 @@ function mergeLineupSources(...sources){
   return {home:side('home'),away:side('away')};
 }
 
-function publicPhaseRank(value=''){const phase=String(value||'').toUpperCase();if(['FINAL','FINISHED','CONFIRMED','ARCHIVED'].includes(phase))return 90;if(phase==='PENALTIES')return 80;if(phase==='EXTRA_TIME')return 70;if(phase==='SECOND_HALF')return 60;if(phase==='HALFTIME'||phase==='INTERVALO')return 50;if(['LIVE_UNKNOWN','LIVE','IN_PROGRESS','IN_PROGRESS_UNKNOWN'].includes(phase))return 45;if(phase==='FIRST_HALF')return 40;if(['PRE_GAME','PRE_MATCH'].includes(phase))return 20;if(['SCHEDULED','PROGRAMADO'].includes(phase))return 10;return 0;}
+function publicPhaseRank(value=''){const phase=String(value||'').trim().toUpperCase();if(['FINAL','FINISHED','CONFIRMED','ARCHIVED','FINALIZADA','FINALIZADO','FIM DE JOGO'].includes(phase))return 90;if(['PENALTIES','PÊNALTIS','PENALTIS'].includes(phase))return 80;if(['EXTRA_TIME','PRORROGAÇÃO','PRORROGACAO'].includes(phase))return 70;if(['SECOND_HALF','2º TEMPO','2° TEMPO','SEGUNDO TEMPO'].includes(phase))return 60;if(['HALFTIME','INTERVALO'].includes(phase))return 50;if(['LIVE_UNKNOWN','LIVE','IN_PROGRESS','IN_PROGRESS_UNKNOWN','EM ANDAMENTO','EM ANDAMENTO SEM RELÓGIO','EM ANDAMENTO SEM RELOGIO'].includes(phase))return 45;if(['FIRST_HALF','1º TEMPO','1° TEMPO','PRIMEIRO TEMPO'].includes(phase))return 40;if(['PRE_GAME','PRE_MATCH','PRÉ-JOGO','PRE-JOGO'].includes(phase))return 20;if(['SCHEDULED','PROGRAMADO','AGENDADO'].includes(phase))return 10;return 0;}
 function resolveCanonicalPublicPhase(match={},coverage={},matching=[],baseMatch=null){
   const values=[coverage.phase,match.status,baseMatch?.phase,baseMatch?.status,...matching.flatMap(item=>[item?.phase,item?.period,item?.status,item?.isFinal===true?'FINAL':''])].filter(Boolean);
   return values.sort((a,b)=>publicPhaseRank(b)-publicPhaseRank(a))[0]||'PROGRAMADO';
@@ -280,7 +280,7 @@ function publicRegionMatch(id,baseMatch=null){
     competitionId:firstValue(x=>x?.competitionId,baseMatch?.competitionId||""),
     round:firstValue(x=>x?.round,baseMatch?.round||""),
     roundId:firstValue(x=>x?.roundId,baseMatch?.roundId||""),
-    knockout:publicCanonicalKnockout(matchId,firstValue(x=>x?.knockout,baseMatch?.knockout||null)),
+    knockout:publicCanonicalKnockout(matchId,{...(firstValue(x=>x?.knockout,baseMatch?.knockout||null)||{}),tieHome:firstValue(x=>x?.knockout?.tieHome,baseMatch?.knockout?.tieHome||baseMatch?.home||null),tieAway:firstValue(x=>x?.knockout?.tieAway,baseMatch?.knockout?.tieAway||baseMatch?.away||null)}),
     stateRevision:publicStateRevision(matchId),
     venue:firstValue(x=>x?.venue,coverage.venue||baseMatch?.venue||""),
     phase,
