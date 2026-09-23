@@ -13,7 +13,7 @@ import { getEffectiveElapsedSeconds } from './match-presentation.js';
 import { recalculateAutomaticStandingsForMatch } from './standings-engine.js';
 
 export const FINAL_PHASES = new Set(['FINAL','FINISHED','CONFIRMED','ARCHIVED']);
-export const LIVE_PHASES = new Set(['FIRST_HALF','LIVE_UNKNOWN','HALFTIME','SECOND_HALF','EXTRA_TIME','EXTRA_TIME_FIRST_HALF','EXTRA_TIME_HALFTIME','EXTRA_TIME_SECOND_HALF','PENALTIES']);
+export const LIVE_PHASES = new Set(['FIRST_HALF','LIVE_UNKNOWN','HALFTIME','SECOND_HALF','EXTRA_TIME','EXTRA_TIME_FIRST_HALF','EXTRA_TIME_HALFTIME','EXTRA_TIME_SECOND_HALF','PENALTIES','Q1','Q2','Q3','Q4','OVERTIME','P1','P2','P3','SET_1','SET_2','SET_3','SET_4','SET_5','SET_6','SET_7','INNING_1','INNING_2','INNING_3','INNING_4','INNING_5','INNING_6','INNING_7','INNING_8','INNING_9','INNINGS_1','INNINGS_2','ROUND_1','ROUND_2','ROUND_3','ROUND_4','ROUND_5','ROUND_6','ROUND_7','ROUND_8','ROUND_9','ROUND_10','ROUND_11','ROUND_12','BOUT']);
 
 export function canonicalStatus(phase='SCHEDULED') {
   const value=String(phase||'SCHEDULED').toUpperCase();

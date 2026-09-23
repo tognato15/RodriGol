@@ -1,3 +1,4 @@
+import { sportProfile, phaseOptions } from './sports-engine.js';
 import { publishCommand } from './bridge-client.js';
 import {
   getActiveMatch,
@@ -50,9 +51,51 @@ const EVENT_META = {
   SUBSTITUTION: { label: 'SUBSTITUIÇÃO', icon: '🔁', color: '#216ba0' },
   VAR: { label: 'VAR', icon: '▣', color: '#6a3b8d' },
   INFORMATION: { label: 'INFORMAÇÃO', icon: 'ⓘ', color: '#287596' },
-  REVIEW: { label: 'APURAÇÃO', icon: '⌕', color: '#52616b' }
+  REVIEW: { label: 'APURAÇÃO', icon: '⌕', color: '#52616b' },
+  POINT_1: { label: '+1 PONTO', icon: '+1', color: '#18833a', points: 1 },
+  POINT_2: { label: '+2 PONTOS', icon: '+2', color: '#18833a', points: 2 },
+  POINT_3: { label: '+3 PONTOS', icon: '+3', color: '#18833a', points: 3 },
+  VOLLEY_POINT: { label: 'PONTO', icon: '+1', color: '#18833a', points: 1 },
+  RUGBY_TRY: { label: 'TRY', icon: 'TRY', color: '#18833a', points: 5 },
+  RUGBY_CONVERSION: { label: 'CONVERSÃO', icon: '+2', color: '#18833a', points: 2 },
+  RUGBY_PENALTY: { label: 'PENAL', icon: '+3', color: '#18833a', points: 3 },
+  RUGBY_DROP_GOAL: { label: 'DROP GOAL', icon: '+3', color: '#18833a', points: 3 },
+  TOUCHDOWN: { label: 'TOUCHDOWN', icon: 'TD', color: '#18833a', points: 6 },
+  EXTRA_POINT: { label: 'EXTRA POINT', icon: '+1', color: '#18833a', points: 1 },
+  TWO_POINT_CONVERSION: { label: 'CONVERSÃO DE 2', icon: '+2', color: '#18833a', points: 2 },
+  FIELD_GOAL: { label: 'FIELD GOAL', icon: '+3', color: '#18833a', points: 3 },
+  SAFETY: { label: 'SAFETY', icon: '+2', color: '#18833a', points: 2 },
+  RUN: { label: 'CORRIDA', icon: '+1', color: '#18833a', points: 1 },
+  CRICKET_RUN:{label:'RUN',icon:'+1',color:'#18833a',points:1}, WICKET:{label:'WICKET',icon:'W',color:'#9d2429'}, NETBALL_GOAL:{label:'PONTO',icon:'+1',color:'#18833a',points:1},
+  LEAGUE_TRY:{label:'TRY',icon:'TRY',color:'#18833a',points:4}, LEAGUE_CONVERSION:{label:'CONVERSÃO',icon:'+2',color:'#18833a',points:2}, LEAGUE_PENALTY:{label:'PENAL',icon:'+2',color:'#18833a',points:2}, LEAGUE_DROP_GOAL:{label:'DROP GOAL',icon:'+1',color:'#18833a',points:1},
+  TENNIS_POINT:{label:'PONTO',icon:'+1',color:'#18833a',points:1}, TABLE_TENNIS_POINT:{label:'PONTO',icon:'+1',color:'#18833a',points:1}
 };
-const initialState = { homeScore: 0, awayScore: 0, penaltiesHome: 0, penaltiesAway: 0, homeScorers: [], awayScorers: [], events: [], phase: 'PRE_GAME', elapsedSeconds: 0, clockRunning: false, clockStartedAt: null, selectedType: 'GOAL', referee: '', attendance: '', weather: '', lineups: { home: { coach: '', starters: [], bench: [] }, away: { coach: '', starters: [], bench: [] } } };
+const SPORT_EVENT_TYPES={
+  FOOTBALL:['GOAL','PENALTY_SCORED','PENALTY_MISSED','YELLOW_CARD','RED_CARD','SUBSTITUTION','VAR','INFORMATION','REVIEW'],
+  FUTSAL:['GOAL','YELLOW_CARD','RED_CARD','INFORMATION','REVIEW'],
+  BASKETBALL:['POINT_1','POINT_2','POINT_3','INFORMATION','REVIEW'],
+  VOLLEYBALL:['VOLLEY_POINT','INFORMATION','REVIEW'],
+  HANDBALL:['GOAL','INFORMATION','REVIEW'],
+  RUGBY:['RUGBY_TRY','RUGBY_CONVERSION','RUGBY_PENALTY','RUGBY_DROP_GOAL','INFORMATION','REVIEW'],
+  WATER_POLO:['GOAL','INFORMATION','REVIEW'],
+  BASEBALL:['RUN','INFORMATION','REVIEW'],
+  HOCKEY:['GOAL','INFORMATION','REVIEW'],
+  AMERICAN_FOOTBALL:['TOUCHDOWN','EXTRA_POINT','TWO_POINT_CONVERSION','FIELD_GOAL','SAFETY','INFORMATION','REVIEW'],
+  OTHER:['POINT_1','INFORMATION','REVIEW']
+};
+function scoringValue(event={}){if(Number.isFinite(Number(event.points)))return Number(event.points);return Number(EVENT_META[event.type]?.points)||(event.type==='GOAL'?1:0);}
+function isScoringEvent(event={}){return scoringValue(event)>0;}
+function renderSportEventTypes(){
+  const sport=String(match.sport||'FOOTBALL').toUpperCase(),profile=sportProfile(sport),types=profile.events||SPORT_EVENT_TYPES.OTHER,box=$('eventTypes');
+  if(!types.includes(state.selectedType))state.selectedType=types[0];
+  box.innerHTML=types.map(type=>{const meta=EVENT_META[type];return `<button class="event-type${type==='RED_CARD'||type==='PENALTY_MISSED'?' red':''}" data-type="${type}">${meta.icon}<span>${meta.label}</span></button>`}).join('');
+  box.querySelectorAll('.event-type').forEach(button=>button.addEventListener('click',()=>{state.selectedType=button.dataset.type;box.querySelectorAll('.event-type').forEach(item=>item.classList.toggle('active',item===button));renderSubstitutionFields();renderEventPlayerOptions();}));
+  const phaseSelect=$('matchPhase');
+  if(phaseSelect){const current=state.phase;phaseSelect.innerHTML=phaseOptions(sport).map(([value,label])=>`<option value="${value}">${label}</option>`).join('');if([...phaseSelect.options].some(o=>o.value===current))phaseSelect.value=current;}
+  const help=document.querySelector('.score-help');if(help)help.textContent=profile.unit==='gol'?'O placar é atualizado pelos gols registrados na cronologia.':`O placar é atualizado pelos eventos de ${profile.unit||'pontuação'} registrados na cronologia.`;
+}
+
+const initialState = { homeScore: 0, awayScore: 0, penaltiesHome: 0, penaltiesAway: 0, homeScorers: [], awayScorers: [], events: [], phase: 'PRE_GAME', elapsedSeconds: 0, clockRunning: false, clockStartedAt: null, clockDirection: 'UP', clockDisabled: false, selectedType: 'GOAL', referee: '', attendance: '', weather: '', lineups: { home: { coach: '', starters: [], bench: [] }, away: { coach: '', starters: [], bench: [] } } };
 let editingEventId = null;
 let timelineVisibleLimit = 30;
 let deferredFullRenderTimer = null;
@@ -92,6 +135,9 @@ let lastRenderedSecond = -1;
 function effectiveElapsed(coverage = state) {
   return getEffectiveElapsedSeconds(coverage);
 }
+function clockProfile(){ return sportProfile(String(match.sport||'FOOTBALL').toUpperCase()).clock || {mode:'up'}; }
+function segmentClockStart(){ const cfg=clockProfile(); return cfg.mode==='countdown' ? Number(cfg.seconds)||0 : 0; }
+function applyClockProfileForSegment(){ const cfg=clockProfile(); state.clockDirection=cfg.mode==='countdown'?'DOWN':'UP'; state.clockDisabled=cfg.mode==='none'; if(cfg.mode==='countdown') state.elapsedSeconds=segmentClockStart(); else if(cfg.mode==='none') state.elapsedSeconds=0; }
 function freezeElapsed() { state.elapsedSeconds = effectiveElapsed(); state.clockStartedAt = null; }
 let lastLocalMutationAt=0;
 function saveState() { lastLocalMutationAt=Date.now(); const result=syncMatchFromCoverage(match.id,{ ...state, updatedAt: new Date().toISOString() }); if(result) match=result.match; }
@@ -285,7 +331,7 @@ function render() {
   $('homeScorers').textContent = state.homeScorers.join(' · ') || '—';
   $('awayScorers').textContent = state.awayScorers.join(' · ') || '—';
   const elapsed = effectiveElapsed();
-  $('clockText').textContent = shouldShowClock(currentPhase) ? formatClock(elapsed) : '';
+  $('clockText').textContent = shouldShowClock(currentPhase) && !state.clockDisabled ? formatClock(elapsed) : 'SEM RELÓGIO';
   $('matchStatusBadge').textContent = currentPhase.status;
   $('periodLabel').textContent = currentPhase.period;
   $('coverageStatus').textContent = currentPhase.status;
@@ -396,9 +442,10 @@ function rebuildFromEvents() {
   let homeScore = 0, awayScore = 0, penaltiesHome = 0, penaltiesAway = 0;
   const homeScorers = [], awayScorers = [];
   [...state.events].reverse().forEach(event => {
-    if (event.type === 'GOAL') {
-      if (event.team === 'HOME') { homeScore += 1; if (event.player) homeScorers.push(`${event.minute}' ${event.player}`); }
-      if (event.team === 'AWAY') { awayScore += 1; if (event.player) awayScorers.push(`${event.minute}' ${event.player}`); }
+    const value=scoringValue(event);
+    if (value) {
+      if (event.team === 'HOME') { homeScore += value; if (event.player) homeScorers.push(`${event.minute}' ${event.player}`); }
+      if (event.team === 'AWAY') { awayScore += value; if (event.player) awayScorers.push(`${event.minute}' ${event.player}`); }
     }
     if(event.type==='PENALTY_SCORED'){ if(event.team==='HOME')penaltiesHome+=1; if(event.team==='AWAY')penaltiesAway+=1; }
     event.score = `${homeScore} × ${awayScore}`;
@@ -521,8 +568,10 @@ function updateClockButton() {
   else { $('startClock').textContent = '▶ Iniciar'; $('startClock').disabled = false; }
 }
 function startClock() {
-  if (state.phase === 'PRE_GAME' || state.phase === 'HALFTIME' || state.phase === 'EXTRA_TIME_HALFTIME') state.phase = state.phase === 'PRE_GAME' ? 'FIRST_HALF' : state.phase === 'HALFTIME' ? 'SECOND_HALF' : 'EXTRA_TIME_SECOND_HALF';
-  if (state.phase === 'FINAL' || state.clockRunning) return;
+  if (state.phase === 'PRE_GAME') { state.phase=(sportProfile(match.sport).periods||[])[0]?.[0]||'FIRST_HALF'; applyClockProfileForSegment(); }
+  if (state.phase === 'HALFTIME') state.phase=(String(match.sport||'FOOTBALL').toUpperCase()==='BASKETBALL'?'Q3':'SECOND_HALF');
+  if (state.phase === 'EXTRA_TIME_HALFTIME') state.phase='EXTRA_TIME_SECOND_HALF';
+  if (state.phase === 'FINAL' || state.clockRunning || state.clockDisabled) return;
   state.clockRunning = true;
   state.clockStartedAt = Date.now();
   addSystemTimelineEvent(state.phase === 'SECOND_HALF' ? 'SECOND_HALF_START' : state.phase === 'EXTRA_TIME_SECOND_HALF' ? 'EXTRA_TIME_SECOND_HALF' : 'MATCH_START', state.phase === 'SECOND_HALF' ? 'RECOMEÇOU' : state.phase === 'EXTRA_TIME_SECOND_HALF' ? 'RECOMEÇOU A PRORROGAÇÃO' : 'COMEÇOU', '▶', phase().period);
@@ -531,7 +580,7 @@ function startClock() {
 function renderClockTick() {
   const currentPhase = phase();
   const elapsed = effectiveElapsed();
-  $('clockText').textContent = shouldShowClock(currentPhase) ? formatClock(elapsed) : '';
+  $('clockText').textContent = shouldShowClock(currentPhase) && !state.clockDisabled ? formatClock(elapsed) : 'SEM RELÓGIO';
   if (document.activeElement !== $('minute')) $('minute').value = Math.floor(elapsed / 60);
 }
 function ensureTickTimer() {
@@ -552,7 +601,17 @@ function pauseClock() {
   addSystemTimelineEvent('CLOCK_PAUSE', 'JOGO PAUSADO', 'Ⅱ', phase().period);
   updateClockButton(); stopTickTimer(); saveState(); render(); publishScoreboard().catch(error => log(error.message));
 }
-function resetClock() { if (state.clockRunning) freezeElapsed(); state.clockRunning = false; state.elapsedSeconds = 0; state.clockStartedAt = null; stopTickTimer(); saveState(); render(); updateClockButton(); publishScoreboard().catch(error => log(error.message)); }
+function resetClock() { if (state.clockRunning) freezeElapsed(); state.clockRunning = false; state.elapsedSeconds = segmentClockStart(); state.clockStartedAt = null; stopTickTimer(); saveState(); render(); updateClockButton(); publishScoreboard().catch(error => log(error.message)); }
+function editClock(){
+  const current=formatClock(effectiveElapsed());
+  const value=prompt('Informe o relógio no formato MM:SS',current);
+  if(value==null)return;
+  const parts=String(value).trim().match(/^(\d{1,3}):(\d{2})$/);
+  if(!parts||Number(parts[2])>59){alert('Use o formato MM:SS.');return;}
+  state.elapsedSeconds=Number(parts[1])*60+Number(parts[2]); state.clockStartedAt=state.clockRunning?Date.now():null; state.clockDisabled=false;
+  saveState(); render(); publishScoreboard().catch(error=>log(error.message));
+}
+function setNoClock(){ if(state.clockRunning)freezeElapsed(); state.clockRunning=false; state.clockStartedAt=null; state.clockDisabled=true; stopTickTimer(); saveState(); render(); publishScoreboard().catch(error=>log(error.message)); }
 function scheduleDeferredFullRender(delay=450){
   clearTimeout(deferredFullRenderTimer);
   deferredFullRenderTimer=setTimeout(()=>{if(!document.hidden)render();},Math.max(120,Number(delay)||450));
@@ -568,8 +627,11 @@ function setPhase(value) {
   if (state.clockRunning && (value === 'HALFTIME' || value === 'EXTRA_TIME_HALFTIME' || value === 'FINAL' || value === 'LIVE_UNKNOWN')) freezeElapsed();
   const previousPhase = state.phase;
   state.phase = value;
+  const profilePeriods=new Set((sportProfile(match.sport).periods||[]).map(([id])=>id));
+  if(profilePeriods.has(value) && value!=='HALFTIME'){ state.clockRunning=false; state.clockStartedAt=null; applyClockProfileForSegment(); }
   if (value === 'HALFTIME' || value === 'EXTRA_TIME_HALFTIME' || value === 'FINAL' || value === 'LIVE_UNKNOWN') { state.clockRunning = false; stopTickTimer(); }
   if (previousPhase !== value) {
+    if(profilePeriods.has(value) && !['HALFTIME'].includes(value)) addSystemTimelineEvent('SEGMENT_START', `INÍCIO DO ${phase().period}`, '▶', phase().period);
     if (value === 'LIVE_UNKNOWN') addSystemTimelineEvent('MATCH_START_UNKNOWN', 'EM ANDAMENTO', '▶', 'Partida em andamento sem relógio confirmado');
     if (value === 'HALFTIME') addSystemTimelineEvent('HALFTIME', 'INTERVALO', '⏸', 'Fim do primeiro tempo');
     if (value === 'SECOND_HALF') addSystemTimelineEvent('SECOND_HALF', 'SEGUNDO TEMPO', '▶', 'Recomeço da partida');
@@ -587,7 +649,7 @@ function setPhase(value) {
 }
 function makeEvent() {
   const meta = EVENT_META[state.selectedType],createdAt=new Date().toISOString(),id=crypto.randomUUID?.() || String(Date.now());
-  const base={id,type:state.selectedType,label:meta.label,icon:meta.icon,color:meta.color,minute:currentMinute(),team:$('team').value,player:$('player').value.trim(),details:$('details').value.trim(),createdAt};
+  const base={id,type:state.selectedType,label:meta.label,icon:meta.icon,color:meta.color,points:Number(meta.points)||0,minute:currentMinute(),team:$('team').value,player:$('player').value.trim(),details:$('details').value.trim(),createdAt};
   if(state.selectedType==='SUBSTITUTION'){
     const substitutionOut=$('substitutionOut').value,substitutionIn=$('substitutionIn').value;
     if(!substitutionOut||!substitutionIn)throw new Error('Selecione quem sai e quem entra.');
@@ -596,9 +658,10 @@ function makeEvent() {
   return normalizedTimelineEvent(base);
 }
 function applyEvent(event) {
-  if (event.type === 'GOAL') {
-    if (event.team === 'HOME') { state.homeScore++; if (event.player) state.homeScorers.push(`${event.minute}' ${event.player}`); }
-    if (event.team === 'AWAY') { state.awayScore++; if (event.player) state.awayScorers.push(`${event.minute}' ${event.player}`); }
+  const scoreValue=scoringValue(event);
+  if (scoreValue) {
+    if (event.team === 'HOME') { state.homeScore+=scoreValue; if (event.player) state.homeScorers.push(`${event.minute}' ${event.player}`); }
+    if (event.team === 'AWAY') { state.awayScore+=scoreValue; if (event.player) state.awayScorers.push(`${event.minute}' ${event.player}`); }
   }
   if(event.type==='PENALTY_SCORED'){
     if(state.phase!=='PENALTIES')throw new Error('Marque a fase PÊNALTIS antes de registrar cobranças.');
@@ -648,9 +711,10 @@ async function publishEvent() {
 }
 function undoLast() {
   const event = state.events.shift(); if (!event) return;
-  if (event.type === 'GOAL') {
-    if (event.team === 'HOME') { state.homeScore = Math.max(0, state.homeScore - 1); if (event.player) state.homeScorers.pop(); }
-    if (event.team === 'AWAY') { state.awayScore = Math.max(0, state.awayScore - 1); if (event.player) state.awayScorers.pop(); }
+  const scoreValue=scoringValue(event);
+  if (scoreValue) {
+    if (event.team === 'HOME') { state.homeScore = Math.max(0, state.homeScore - scoreValue); if (event.player) state.homeScorers.pop(); }
+    if (event.team === 'AWAY') { state.awayScore = Math.max(0, state.awayScore - scoreValue); if (event.player) state.awayScorers.pop(); }
   }
   if(event.type==='PENALTY_SCORED'){if(event.team==='HOME')state.penaltiesHome=Math.max(0,(Number(state.penaltiesHome)||0)-1);if(event.team==='AWAY')state.penaltiesAway=Math.max(0,(Number(state.penaltiesAway)||0)-1);}
   if(event.type==='SUBSTITUTION')state.lineups=rebuildOperationalLineups(state.lineups,state.events);
@@ -674,12 +738,15 @@ async function health() {
 }
 
 // Ligações da interface
+renderSportEventTypes();
 document.querySelectorAll('.event-type').forEach(button => button.addEventListener('click', () => { state.selectedType = button.dataset.type; document.querySelectorAll('.event-type').forEach(item=>item.classList.toggle('active',item===button)); renderSubstitutionFields(); renderEventPlayerOptions(); }));
 document.querySelectorAll('.flow').forEach(button => button.addEventListener('click', () => setPhase(button.dataset.phase)));
 $('matchPhase').addEventListener('change', event => setPhase(event.target.value));
 $('startClock').addEventListener('click', startClock);
 $('pauseClock').addEventListener('click', pauseClock);
 $('resetClock').addEventListener('click', resetClock);
+$('editClock').addEventListener('click', editClock);
+$('noClock').addEventListener('click', setNoClock);
 $('clearCoverage').addEventListener('click', clearCoverage);
 $('saveLineups').addEventListener('click', saveLineups);
 $('saveMatchFacts').addEventListener('click', saveMatchFacts);

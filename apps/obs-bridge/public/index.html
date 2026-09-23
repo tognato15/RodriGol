@@ -53,6 +53,8 @@
 <button id="startClock">▶ Iniciar</button>
 <button id="pauseClock">Ⅱ Pausar</button>
 <button id="resetClock">↺ Zerar relógio</button>
+<button id="editClock">✎ Editar relógio</button>
+<button id="noClock">◌ Sem relógio</button>
 <button class="danger-ghost" id="clearCoverage">⌫ Limpar cobertura</button>
 </div>
 <select id="matchPhase">
@@ -84,7 +86,7 @@
 <section class="match-facts panel" id="matchFactsPanel">
 <div class="section-title"><div><h3>DADOS DA PARTIDA</h3><small>Atualize as informações exibidas no card principal do overlay.</small></div><button id="saveMatchFacts" type="button">Salvar dados</button></div>
 <div class="match-facts-grid">
-<label>Árbitro<input id="matchReferee" placeholder="Nome do árbitro"/></label>
+<label>Arbitragem<input id="matchReferee" placeholder="Ex.: Árbitro 1; Árbitro 2"/></label>
 <label>Público<input id="matchAttendance" inputmode="numeric" placeholder="Ex.: 43.275"/></label>
 <label>Clima<input id="matchWeather" placeholder="Ex.: 21°C · Nublado"/><button class="weather-action" id="fetchMatchWeather" type="button">☁ Buscar clima agora</button><small class="weather-status" id="matchWeatherLookupStatus"></small></label>
 </div>

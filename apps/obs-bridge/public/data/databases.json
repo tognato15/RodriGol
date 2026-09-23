@@ -1,0 +1,6 @@
+{
+  "version": "2.1.1",
+  "databases": [
+    {"id":"brasileirao-serie-a-2026","name":"Campeonato Brasileiro Série A 2026","path":"/control/data/brasileirao-2026.json"}
+  ]
+}

@@ -1,6 +1,6 @@
 {
   "name": "rodrigol-2",
-  "version": "2.2.2-rc.golive.1.1",
+  "version": "2.1.4-standings-sync.2026",
   "private": true,
   "description": "RodriGol Go-Live 1.1 — persistência central e jogos ao vivo multidiários.",
   "type": "module",

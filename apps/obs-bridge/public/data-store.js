@@ -81,7 +81,7 @@ function runtimeForDataSync(){
   return {
     ...saved,
     bridgeHttp:String(saved.bridgeHttp||location.origin).replace(/\/$/,''),
-    remoteStorageEnabled:localHost?Boolean(saved.remoteStorageEnabled):true
+    remoteStorageEnabled:true
   };
 }
 
@@ -725,3 +725,39 @@ export function getJourneyImpact(journeyOrId){
 
 export function getOperationalMatches(){const journey=getActiveJourney(),matches=getMatches();const terminal=new Set(['SCHEDULED','FINAL','FINISHED','CONFIRMED','ARCHIVED']);const active=m=>{if(m.archivedAt)return false;const stored=String(m.status||'SCHEDULED').toUpperCase();if(terminal.has(stored))return false;const phase=String(readCoverage(m.id,{phase:stored}).phase||stored).toUpperCase();return !terminal.has(phase);};const operational=matches.filter(active);if(!journey)return operational;const ids=new Set(journey.matchIds||[]),competitions=new Set(journey.competitionIds||[]),rounds=new Set(journey.roundIds||[]);return matches.filter(m=>ids.has(m.id)||journeyCompetitionMatches(m,competitions)||journeyRoundMatches(m,rounds)).filter(active);}
 export function getMatchBuckets(){const buckets={upcoming:[],operational:[],finished:[],archived:[]};for(const match of getMatches()){const phase=String(readCoverage(match.id,{phase:match.status}).phase||match.status||'SCHEDULED').toUpperCase();if(match.archivedAt||phase==='ARCHIVED')buckets.archived.push(match);else if(['FINAL','FINISHED','CONFIRMED'].includes(phase))buckets.finished.push(match);else if(['SCHEDULED'].includes(phase))buckets.upcoming.push(match);else buckets.operational.push(match);}return buckets;}
+
+
+export async function importCompetitionDataset(dataset={}){
+  const incomingClubs=Array.isArray(dataset.clubs)?dataset.clubs:[];
+  const incomingMatches=Array.isArray(dataset.matches)?dataset.matches:[];
+  const incomingRounds=Array.isArray(dataset.rounds)?dataset.rounds:[];
+  const competition=dataset.competition||null;
+  if(!competition?.id)throw new Error('Dataset sem competição válida.');
+  const key=value=>String(value||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'');
+  const canonicalClubAlias=value=>{const k=key(value);const groups={flamengo:['flamengo','clubederegatasdoflamengo','crflamengo','fla'],palmeiras:['palmeiras','sociedadeesportivapalmeiras','sepalmeiras','pal'],bragantino:['bragantino','redbullbragantino','rbbragantino','rbb'],corinthians:['corinthians','sportclubcorinthianspaulista','sccorinthians','cor'],santos:['santos','santosfc','san'],saopaulo:['saopaulo','saopaulofc','sao'],atleticomg:['atleticomg','clubatleticomineiro','cam'],athleticopr:['athleticopr','atleticopr','clubathleticoparanaense','cap'],vasco:['vasco','vascodagama','crvascodagama','vascodagamasaf','vas'],botafogo:['botafogo','botafogorj','botafogodefuteboleregatas','bot'],fluminense:['fluminense','fluminensefc','flu'],internacional:['internacional','sportclubinternacional','sci','int'],gremio:['gremio','gremiofbpa','gre'],bahia:['bahia','esporteclubebahia','ecbahia','bah'],cruzeiro:['cruzeiro','cruzeiroec','cru'],coritiba:['coritiba','coritibafc','coritibasaf','cfc'],vitoria:['vitoria','ecvitoria','vit'],chapecoense:['chapecoense','associacaochapecoensedefutebol','cha'],mirassol:['mirassol','mirassolfc','mir'],remo:['remo','clubedoremo','rem']};for(const [id,aliases] of Object.entries(groups))if(aliases.includes(k))return id;return k;};
+  const clubs=getClubs(); const clubIdMap=new Map(); let newClubs=0,reusedClubs=0;
+  for(const club of incomingClubs){
+    const aliases=[club.id,club.name,club.shortName,club.abbreviation].map(canonicalClubAlias).filter(Boolean);
+    let i=clubs.findIndex(x=>[x.id,x.name,x.shortName,x.abbreviation].map(canonicalClubAlias).some(v=>v&&aliases.includes(v)));
+    if(i>=0){const existing=clubs[i];clubIdMap.set(club.id,existing.id);const merged={...club,...existing,id:existing.id};for(const [field,value] of Object.entries(club)){const current=existing[field];if((current===undefined||current===null||current==='')&&value!==undefined&&value!==null&&value!=='')merged[field]=value;}merged.crestDataUrl=existing.crestDataUrl||club.crestDataUrl||'';merged.sports=[...new Set([...(existing.sports||[]),...(club.sports||[]),'FOOTBALL'])];clubs[i]=merged;reusedClubs++;}
+    else{clubs.push(club);clubIdMap.set(club.id,club.id);newClubs++;}
+  }
+  saveClubs(clubs);
+  const competitions=getCompetitions(); const compAliases=[competition.id,competition.name,competition.shortName,competition.abbreviation].map(key).filter(Boolean);
+  let ci=competitions.findIndex(x=>[x.id,x.name,x.shortName,x.abbreviation].map(key).some(v=>v&&compAliases.includes(v)));
+  let competitionId=competition.id,newCompetitions=0,reusedCompetitions=0;
+  if(ci>=0){const existing=competitions[ci];competitionId=existing.id;const merged={...competition,...existing,id:existing.id};for(const [field,value] of Object.entries(competition)){const current=existing[field];if((current===undefined||current===null||current==='')&&value!==undefined&&value!==null&&value!=='')merged[field]=value;}merged.season=existing.season||competition.season;merged.logoDataUrl=existing.logoDataUrl||competition.logoDataUrl||'';competitions[ci]=merged;reusedCompetitions++;}
+  else{competitions.push(competition);newCompetitions++;}
+  saveCompetitions(competitions);
+  const roundState=getRoundsState(); const roundIdMap=new Map();
+  for(const round of incomingRounds){const record=normalizeRound({...round,competitionId},roundState.items.length);const aliases=[record.id,record.name].map(key);let i=roundState.items.findIndex(x=>x.competitionId===competitionId&&String(x.season||'')===String(record.season||'')&&[x.id,x.name].map(key).some(v=>aliases.includes(v)));if(i>=0){roundIdMap.set(round.id,roundState.items[i].id);roundState.items[i]={...roundState.items[i],...record,id:roundState.items[i].id,competitionId};}else{roundState.items.push(record);roundIdMap.set(round.id,record.id);}}
+  saveRoundsState(roundState);
+  const matches=getMatches();let created=0,updated=0,protectedLive=0;
+  for(const raw of incomingMatches){const incoming={...raw,competitionId,homeClubId:clubIdMap.get(raw.homeClubId)||raw.homeClubId,awayClubId:clubIdMap.get(raw.awayClubId)||raw.awayClubId,roundId:roundIdMap.get(raw.roundId)||raw.roundId};const identity=key(`${competitionId}|${incoming.season}|${incoming.round}|${incoming.homeClubId}|${incoming.awayClubId}`);let i=matches.findIndex(x=>x.id===incoming.id||key(`${x.competitionId}|${x.season}|${x.round}|${x.homeClubId}|${x.awayClubId}`)===identity);if(i<0){matches.push(incoming);created++;i=matches.length-1;}else{const existing=matches[i],phase=String(readCoverage(existing.id,{phase:existing.status||'SCHEDULED'}).phase||existing.status||'SCHEDULED').toUpperCase();const live=!['SCHEDULED','PRE_GAME','FINAL','FINISHED','CONFIRMED','ARCHIVED'].includes(phase);const protectedFields=live?{status:existing.status,date:existing.date,time:existing.time}:{};matches[i]={...existing,...incoming,id:existing.id,...protectedFields};updated++;if(live)protectedLive++;}
+    const saved=matches[i],savedPhase=String(saved.status||'SCHEDULED').toUpperCase();if(['FINAL','FINISHED'].includes(savedPhase)&&Number.isFinite(Number(saved.homeScore))&&Number.isFinite(Number(saved.awayScore))){const current=readCoverage(saved.id,{events:[],homeScorers:[],awayScorers:[]})||{};saveCoverage(saved.id,{...current,phase:'FINAL',homeScore:Number(saved.homeScore),awayScore:Number(saved.awayScore),clockRunning:false,clockStartedAt:null});}
+  }
+  saveMatches(matches);
+  return {competitionId,clubs:incomingClubs.length,rounds:incomingRounds.length,matches:incomingMatches.length,created,updated,protectedLive,newClubs,reusedClubs,newCompetitions,reusedCompetitions};
+}
+export async function flushDataSync(){await Promise.allSettled([...pendingWideWrites.values(),...remoteWriteChains.values()]);return {pendingLocal:pendingWideWrites.size,pendingRemote:remoteWriteChains.size,retries:remoteRetryQueue.size};}
+

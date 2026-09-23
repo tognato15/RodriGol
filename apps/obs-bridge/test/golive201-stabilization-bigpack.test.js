@@ -1,0 +1,14 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+const portal=await readFile(new URL('../public/portal/index.html',import.meta.url),'utf8');
+const clubs=await readFile(new URL('../public/clubs.js',import.meta.url),'utf8');
+const clubsHtml=await readFile(new URL('../public/clubs.html',import.meta.url),'utf8');
+const server=await readFile(new URL('../server.mjs',import.meta.url),'utf8');
+test('API pública resolve modalidade pela competição quando a partida antiga não tem sport',()=>{assert.match(server,/resolvedSport=String\(match\.sport\|\|competition\.sport/);assert.match(server,/sport:resolvedSport/)});
+test('Portal infere basquete de quartos e eventos de pontos sem cair em Futebol',()=>{assert.match(portal,/function inferredSport/);assert.match(portal,/POINT_\[123\]/);assert.match(portal,/sportLabel\(match\)/)});
+test('card de basquete não usa faixa de autores de gols',()=>{assert.match(portal,/showGoalStrip=inferredSport\(match\)===\'FOOTBALL\'/)});
+test('detalhe ao vivo prioriza estado canônico e não mostra PROGRAMADO residual',()=>{assert.match(portal,/match\.live\?\(publicPhaseLabel/)});
+test('atualização de detalhe não substitui a tela por loading quando já existe snapshot',()=>{assert.match(portal,/if\(!cached\).*Carregando partida/);assert.doesNotMatch(portal,/Atualizando partida\.\.\./)});
+test('Editor de Clubes usa seletor compacto de modalidades',()=>{assert.match(clubsHtml,/class="sport-picker"/);assert.match(clubsHtml,/id="sportSummary"/);assert.match(clubs,/function renderSportSummary/)});
+test('Equipes e categorias ficam recolhidas e editáveis sob demanda',()=>{assert.match(clubsHtml,/\+ Adicionar equipe\/categoria/);assert.match(clubs,/class=\"team-unit-card\"/);assert.match(clubs,/Editar ▾/)});

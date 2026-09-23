@@ -62,7 +62,12 @@ export function canonicalMatchPhase(value = '') {
   return raw;
 }
 
-const CLOCK_PHASES = new Set(['FIRST_HALF','SECOND_HALF','EXTRA_TIME','EXTRA_TIME_FIRST_HALF','EXTRA_TIME_SECOND_HALF']);
+const SEGMENT_LABELS={BOUT:'COMBATE',Q1:'1º QUARTO',Q2:'2º QUARTO',Q3:'3º QUARTO',Q4:'4º QUARTO',P1:'1º PERÍODO',P2:'2º PERÍODO',P3:'3º PERÍODO',OVERTIME:'PRORROGAÇÃO',INNINGS_1:'1º INNINGS',INNINGS_2:'2º INNINGS'};
+for(let i=1;i<=9;i++)SEGMENT_LABELS[`INNING_${i}`]=`${i}º INNING`;
+for(let i=1;i<=7;i++)SEGMENT_LABELS[`SET_${i}`]=`${i}º SET`;
+for(let i=1;i<=12;i++)SEGMENT_LABELS[`ROUND_${i}`]=`${i}º ROUND`;
+const SEGMENT_PHASES=new Set(Object.keys(SEGMENT_LABELS));
+const CLOCK_PHASES = new Set(['FIRST_HALF','SECOND_HALF','EXTRA_TIME','EXTRA_TIME_FIRST_HALF','EXTRA_TIME_SECOND_HALF',...SEGMENT_PHASES]);
 const BEFORE_KICKOFF = new Set(['SCHEDULED', 'PRE_GAME']);
 const NO_SCORE = new Set(['SCHEDULED', 'PRE_GAME']);
 
@@ -81,7 +86,8 @@ const FALLBACK_COVERAGE = Object.freeze({
 export function getEffectiveElapsedSeconds(coverage = {}, now = Date.now()) {
   const base = Number(coverage.elapsedSeconds) || 0;
   if (!coverage.clockRunning || coverage.clockStartedAt == null) return base;
-  return base + Math.max(0, Math.floor((now - Number(coverage.clockStartedAt)) / 1000));
+  const delta = Math.max(0, Math.floor((now - Number(coverage.clockStartedAt)) / 1000));
+  return coverage.clockDirection === 'DOWN' ? Math.max(0, base - delta) : base + delta;
 }
 
 export function formatClockSeconds(total = 0) {
@@ -155,14 +161,14 @@ export function normalizeCoverage(match = null, stored = null) {
 
 export function deriveVisualState(match = null, coverage = {}) {
   const phase = canonicalMatchPhase(coverage.phase || match?.status) || MATCH_PHASE.PRE_GAME;
-  const labels = PHASE_PRESENTATION[phase] || PHASE_PRESENTATION.PRE_GAME;
+  const labels = PHASE_PRESENTATION[phase] || (SEGMENT_PHASES.has(phase) ? { status: 'AO VIVO', period: SEGMENT_LABELS[phase] } : PHASE_PRESENTATION.PRE_GAME);
   return {
     phase,
     status: labels.status,
     period: labels.period,
     beforeKickoff: BEFORE_KICKOFF.has(phase),
     showScore: !NO_SCORE.has(phase),
-    isLive: ['FIRST_HALF','SECOND_HALF','EXTRA_TIME','EXTRA_TIME_FIRST_HALF','EXTRA_TIME_HALFTIME','EXTRA_TIME_SECOND_HALF','PENALTIES','LIVE_UNKNOWN'].includes(phase),
+    isLive: (['FIRST_HALF','SECOND_HALF','EXTRA_TIME','EXTRA_TIME_FIRST_HALF','EXTRA_TIME_HALFTIME','EXTRA_TIME_SECOND_HALF','PENALTIES','LIVE_UNKNOWN'].includes(phase)||SEGMENT_PHASES.has(phase)),
     isFinal: phase === MATCH_PHASE.FINAL
   };
 }
@@ -180,7 +186,7 @@ export function buildMatchPresentationPayload(match = {}, coverage = {}, options
   const normalized = normalizeCoverage(match, coverage);
   const visual = deriveVisualState(match, normalized);
   const elapsed = getEffectiveElapsedSeconds(normalized, now);
-  const showClock = shouldShowClock(visual);
+  const showClock = shouldShowClock(visual) && normalized.clockDisabled !== true;
   const timingLabel = visual.beforeKickoff ? scheduledDisplay(match, normalized) : '';
 
   return {

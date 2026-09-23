@@ -88,6 +88,8 @@ function publicPhase(match={},coverage={}){
   if(["EXTRA_TIME","PRORROGAÇÃO","PRORROGACAO"].includes(raw))return"PRORROGAÇÃO";
   if(["PENALTIES","PÊNALTIS","PENALTIS"].includes(raw))return"PÊNALTIS";
   if(["LIVE_UNKNOWN","LIVE","IN_PROGRESS","IN_PROGRESS_UNKNOWN","EM ANDAMENTO","EM ANDAMENTO SEM RELÓGIO","EM ANDAMENTO SEM RELOGIO"].includes(raw))return"EM ANDAMENTO";
+  if(/^([1-5])º?\s*(QUARTO|PERÍODO|PERIODO|SET|ROUND|ROUND)$/i.test(raw))return raw.replace(/°/g,'º');
+  if(["INNING","TOP INNING","BOTTOM INNING","ROUND IN PROGRESS","EM ANDAMENTO"].includes(raw))return raw;
   return"PROGRAMADO";
 }
 function publicMatch(match={}){
@@ -102,14 +104,14 @@ function publicMatch(match={}){
     substitutionIn:event.substitutionIn||"",substitutionOut:event.substitutionOut||""
   }));
   return {
-    id:match.id,date:match.date||"",time:match.time||"",competition:match.competition||"",
+    id:match.id,sport:match.sport||match.modality||"FOOTBALL",date:match.date||"",time:match.time||"",competition:match.competition||"",
     competitionId:match.competitionId||"",round:match.round||"",roundId:match.roundId||"",
     venue:match.venue||match.city||"",phase,status:phase,live,
     home:{id:home.id||match.homeClubId||"",name:home.shortName||home.name||"Mandante",abbreviation:home.abbreviation||"",crest:publicClubAsset(home.id||match.homeClubId)},
     away:{id:away.id||match.awayClubId||"",name:away.shortName||away.name||"Visitante",abbreviation:away.abbreviation||"",crest:publicClubAsset(away.id||match.awayClubId)},
     score:{home:Number(coverage.homeScore??match.homeScore)||0,away:Number(coverage.awayScore??match.awayScore)||0},
     scorers:{home:Array.isArray(coverage.homeScorers)?coverage.homeScorers:[],away:Array.isArray(coverage.awayScorers)?coverage.awayScorers:[]},
-    clock:{elapsedSeconds:Number(coverage.elapsedSeconds)||0,running:Boolean(coverage.clockRunning),startedAt:coverage.clockStartedAt??null,visible:coverage.clockVisible!==false,period:coverage.phase||match.status||""},
+    clock:{elapsedSeconds:Number(coverage.elapsedSeconds)||0,running:Boolean(coverage.clockRunning),startedAt:coverage.clockStartedAt??null,direction:String(coverage.clockDirection||'UP').toUpperCase(),visible:coverage.clockVisible!==false,period:coverage.phase||match.status||""},
     facts:{referee:coverage.referee||match.referee||"",attendance:coverage.attendance||match.attendance||"",weather:coverage.weather||match.weather||"",venue:match.venue||match.city||""},
     lineups:{
       home:{coach:coverage.lineups?.home?.coach||"",starters:(coverage.lineups?.home?.starters||[]).slice(0,11),players:(coverage.lineups?.home?.onField||coverage.lineups?.home?.starters||[]).slice(0,11),substitutions:Array.isArray(coverage.lineups?.home?.substitutions)?coverage.lineups.home.substitutions:[]},
@@ -178,7 +180,7 @@ function mergeLineupSources(...sources){
   return {home:side('home'),away:side('away')};
 }
 
-function publicPhaseRank(value=''){const phase=String(value||'').trim().toUpperCase();if(['FINAL','FINISHED','CONFIRMED','ARCHIVED','FINALIZADA','FINALIZADO','FIM DE JOGO'].includes(phase))return 90;if(['PENALTIES','PÊNALTIS','PENALTIS'].includes(phase))return 80;if(['EXTRA_TIME','EXTRA_TIME_FIRST_HALF','EXTRA_TIME_HALFTIME','EXTRA_TIME_SECOND_HALF','PRORROGAÇÃO','PRORROGACAO','1º TEMPO DA PRORROGAÇÃO','INTERVALO DA PRORROGAÇÃO','2º TEMPO DA PRORROGAÇÃO'].includes(phase))return 70;if(['SECOND_HALF','2º TEMPO','2° TEMPO','SEGUNDO TEMPO'].includes(phase))return 60;if(['HALFTIME','INTERVALO'].includes(phase))return 50;if(['LIVE_UNKNOWN','LIVE','IN_PROGRESS','IN_PROGRESS_UNKNOWN','EM ANDAMENTO','EM ANDAMENTO SEM RELÓGIO','EM ANDAMENTO SEM RELOGIO'].includes(phase))return 45;if(['FIRST_HALF','1º TEMPO','1° TEMPO','PRIMEIRO TEMPO'].includes(phase))return 40;if(['PRE_GAME','PRE_MATCH','PRÉ-JOGO','PRE-JOGO'].includes(phase))return 20;if(['SCHEDULED','PROGRAMADO','AGENDADO'].includes(phase))return 10;return 0;}
+function publicPhaseRank(value=''){const phase=String(value||'').trim().toUpperCase();if(['FINAL','FINISHED','CONFIRMED','ARCHIVED','FINALIZADA','FINALIZADO','FIM DE JOGO'].includes(phase))return 90;if(['PENALTIES','PÊNALTIS','PENALTIS'].includes(phase))return 80;if(['EXTRA_TIME','EXTRA_TIME_FIRST_HALF','EXTRA_TIME_HALFTIME','EXTRA_TIME_SECOND_HALF','PRORROGAÇÃO','PRORROGACAO','1º TEMPO DA PRORROGAÇÃO','INTERVALO DA PRORROGAÇÃO','2º TEMPO DA PRORROGAÇÃO'].includes(phase))return 70;if(['SECOND_HALF','2º TEMPO','2° TEMPO','SEGUNDO TEMPO'].includes(phase))return 60;if(['HALFTIME','INTERVALO'].includes(phase))return 50;if(['LIVE_UNKNOWN','LIVE','IN_PROGRESS','IN_PROGRESS_UNKNOWN','EM ANDAMENTO','EM ANDAMENTO SEM RELÓGIO','EM ANDAMENTO SEM RELOGIO'].includes(phase))return 45;if(['FIRST_HALF','1º TEMPO','1° TEMPO','PRIMEIRO TEMPO'].includes(phase))return 40;if(['PRE_GAME','PRE_MATCH','PRÉ-JOGO','PRE-JOGO'].includes(phase))return 20;if(['SCHEDULED','PROGRAMADO','AGENDADO'].includes(phase))return 10;if(/^([1-5])º?\s*(QUARTO|PERÍODO|PERIODO|SET|ROUND|INNING)/.test(phase))return 45;return 0;}
 function resolveCanonicalPublicPhase(match={},coverage={},matching=[],baseMatch=null){
   const values=[coverage.phase,match.status,baseMatch?.phase,baseMatch?.status,...matching.flatMap(item=>[item?.phase,item?.period,item?.status,item?.isFinal===true?'FINAL':''])].filter(Boolean);
   return values.sort((a,b)=>publicPhaseRank(b)-publicPhaseRank(a))[0]||'PROGRAMADO';
@@ -287,12 +289,11 @@ function publicRegionMatch(id,baseMatch=null){
   );
 
   const phase=String(resolveCanonicalPublicPhase({status:baseMatch?.status||''},coverage,matching,baseMatch));
-  const beforeKickoff=
-    matching.some(x=>x?.beforeKickoff===true)||
-    ["PROGRAMADO","SCHEDULED","PRE_MATCH"].includes(phase.toUpperCase());
-  const isFinal=
-    matching.some(x=>x?.isFinal===true)||
-    ["FINAL","FINISHED","CONFIRMED"].includes(phase.toUpperCase());
+  const phaseRank=publicPhaseRank(phase);
+  // Um registro antigo de agenda pode continuar com beforeKickoff=true.
+  // A fase canônica (já resolvida pela maior prioridade) deve prevalecer.
+  const beforeKickoff=phaseRank>0&&phaseRank<=20;
+  const isFinal=phaseRank>=90;
 
   const firstValue=(getter,fallback="")=>{
     for(const item of matching){
@@ -301,6 +302,9 @@ function publicRegionMatch(id,baseMatch=null){
     }
     return fallback;
   };
+  const sportCandidates=[baseMatch?.sport,baseMatch?.modality,...matching.map(item=>item?.sport||item?.modality)]
+    .map(value=>String(value||"").trim().toUpperCase()).filter(Boolean);
+  const sport=sportCandidates.find(value=>value!=="FOOTBALL")||sportCandidates[0]||"FOOTBALL";
 
   return {
     ...(baseMatch||{}),
@@ -308,6 +312,7 @@ function publicRegionMatch(id,baseMatch=null){
     date:firstValue(x=>x?.date,baseMatch?.date||""),
     time:firstValue(x=>x?.time,baseMatch?.time||""),
     competition:firstValue(x=>x?.competition,baseMatch?.competition||""),
+    sport,
     competitionId:firstValue(x=>x?.competitionId,baseMatch?.competitionId||""),
     round:firstValue(x=>x?.round,baseMatch?.round||""),
     roundId:firstValue(x=>x?.roundId,baseMatch?.roundId||""),
@@ -316,7 +321,7 @@ function publicRegionMatch(id,baseMatch=null){
     venue:firstValue(x=>x?.venue,coverage.venue||baseMatch?.venue||""),
     phase,
     status:beforeKickoff?"PROGRAMADO":(
-      isFinal?"FINAL":firstValue(x=>x?.status||x?.period,phase||"EM ANDAMENTO")
+      isFinal?"FINAL":(phase||"EM ANDAMENTO")
     ),
     live:!beforeKickoff&&!isFinal,
     home:{
@@ -345,12 +350,15 @@ function publicRegionMatch(id,baseMatch=null){
       home:coverageIsAuthoritative&&Array.isArray(coverage.homeScorers)?coverage.homeScorers:firstValue(x=>Array.isArray(x?.homeGoals)&&x.homeGoals.length?x.homeGoals:null,baseMatch?.scorers?.home||[]),
       away:coverageIsAuthoritative&&Array.isArray(coverage.awayScorers)?coverage.awayScorers:firstValue(x=>Array.isArray(x?.awayGoals)&&x.awayGoals.length?x.awayGoals:null,baseMatch?.scorers?.away||[])
     },
+    // O coverage persistido é a fonte canônica do relógio. Regiões publicadas podem
+    // chegar alguns ciclos atrasadas e nunca devem rebaixar tempo/direção/fase.
     clock:{
-      elapsedSeconds:Number(firstValue(x=>x?.elapsedSeconds,coverage.elapsedSeconds??baseMatch?.clock?.elapsedSeconds??0))||0,
-      running:Boolean(firstValue(x=>x?.clockRunning,coverage.clockRunning??baseMatch?.clock?.running??false)),
-      startedAt:firstValue(x=>x?.clockStartedAt,coverage.clockStartedAt??baseMatch?.clock?.startedAt??null),
-      visible:firstValue(x=>x?.clockVisible,baseMatch?.clock?.visible??true)!==false,
-      period:firstValue(x=>x?.period,coverage.phase||baseMatch?.clock?.period||phase)
+      elapsedSeconds:Number(coverageIsAuthoritative?coverage.elapsedSeconds:firstValue(x=>x?.elapsedSeconds,baseMatch?.clock?.elapsedSeconds??0))||0,
+      running:Boolean(coverageIsAuthoritative?coverage.clockRunning:firstValue(x=>x?.clockRunning,baseMatch?.clock?.running??false)),
+      startedAt:coverageIsAuthoritative?(coverage.clockStartedAt??null):firstValue(x=>x?.clockStartedAt,baseMatch?.clock?.startedAt??null),
+      direction:String(coverageIsAuthoritative?(coverage.clockDirection??'UP'):firstValue(x=>x?.clockDirection,baseMatch?.clock?.direction??baseMatch?.clock?.clockDirection??'UP')).toUpperCase(),
+      visible:(coverageIsAuthoritative?coverage.clockVisible:firstValue(x=>x?.clockVisible,baseMatch?.clock?.visible??true))!==false,
+      period:coverageIsAuthoritative?(coverage.phase||phase):firstValue(x=>x?.period,baseMatch?.clock?.period||phase)
     },
     facts:{
       referee:coverage.referee||baseMatch?.facts?.referee||"",
@@ -569,7 +577,7 @@ function backupRecords(backup={}){
 }
 function publicHome(date){
   const target=publicDate(date),matches=unionPublicMatches(publicMatchesForDate(target),publicLiveMatches()),standings=publicStandings(),news=publicNews(),highlights=publicHighlights();
-  const radioRaw=persistentData.get("rodrigol-radio-config-v1")||{};const radio={active:radioRaw.active===true,name:String(radioRaw.name||"Rádio RodriGol"),streamUrl:String(radioRaw.streamUrl||""),autoplay:radioRaw.autoplay===true};
+  const radioRaw=persistentData.get("rodrigol-radio-config-v1")||{};const defaultRadioUrl="https://hts09.brascast.com:8438/live";const radio={active:radioRaw.active!==false,name:String(radioRaw.name||"Rádio RodriGol"),streamUrl:String(radioRaw.streamUrl||defaultRadioUrl),autoplay:radioRaw.autoplay===true};
   return {ok:true,generatedAt:new Date().toISOString(),date:target,revision:dataRevision,matches,standings:standings.slice(0,4),news:news.slice(0,6),highlights,radio};
 }
 

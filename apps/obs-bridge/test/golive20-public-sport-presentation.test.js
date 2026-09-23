@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const portal=fs.readFileSync(new URL('../public/portal/index.html',import.meta.url),'utf8');
+const server=fs.readFileSync(new URL('../server.mjs',import.meta.url),'utf8');
+test('API pública entrega direção do relógio e metadados de eventos',()=>{assert.match(server,/direction:String\(coverage\.clockDirection/);assert.match(server,/label:event\.label/);assert.match(server,/details:event\.details/)});
+test('página pública respeita relógio decrescente',()=>{assert.match(portal,/clock\.direction\|\|clock\.clockDirection/);assert.match(portal,/Math\.max\(0,base-delta\)/)});
+test('card só mostra faixa de autores no futebol',()=>{assert.match(portal,/showGoalStrip=String\(match\.sport\|\|'FOOTBALL'\).*==='FOOTBALL'/);assert.match(portal,/showGoalStrip\?`<div class="match-goal-strip/)});
+test('eventos de segmento são traduzidos no portal',()=>{assert.match(portal,/type==='SEGMENT_START'/);assert.match(portal,/Início do \$\{raw\.toLowerCase\(\)\}/)});
+test('detalhe busca estado central antes de renderizar cache',()=>{const start=portal.indexOf('async function loadMatch');const chunk=portal.slice(start,start+1800);assert.ok(chunk.indexOf("fetch(`/api/public/matches/")<chunk.indexOf("matchPage(cached)"))});
+test('rótulos públicos incluem modalidades do megapack',()=>{for(const label of ['Basquete','Beisebol','Críquete','Football','Hóquei Sobre Grama','Rugby League','Tênis de Mesa','Vôlei de Praia'])assert.ok(portal.includes(label),label)});

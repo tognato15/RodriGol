@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+const base=new URL('../public/',import.meta.url);
+const read=async name=>readFile(new URL(name,base),'utf8');
+test('editor de partidas filtra competições e equipes pela modalidade',async()=>{const js=await read('matches.js');assert.match(js,/getCompetitions\(\)\.filter\(c=>normalizeSport\(c\.sport\)===sport\)/);assert.match(js,/getClubs\(\)\.filter\(c=>clubSports\(c\)\.includes\(sport\)\)/);assert.match(js,/\$\('sport'\)\.onchange/)});
+test('editor de competições usa modalidades estruturadas',async()=>{const html=await read('competitions.html');assert.match(html,/id="sport" required/);assert.match(html,/value="BASKETBALL">Basquete/);assert.match(html,/value="VOLLEYBALL">Vôlei/)});
+test('editor de equipes permite vincular modalidade preservando futebol legado',async()=>{const [html,js]=await Promise.all([read('clubs.html'),read('clubs.js')]);assert.match(html,/Modalidades/);assert.match(html,/name="sports" value="BASKETBALL"/);assert.match(js,/sports,sport:sports\[0\]\|\|'FOOTBALL'/)});
+test('informações complementares usam nomenclatura multiesportiva',async()=>{const [matches,clubs,portal]=await Promise.all([read('matches.html'),read('clubs.html'),read('portal/index.html')]);assert.match(matches,/>Arbitragem</);assert.match(matches,/>Local<input id="venue"/);assert.match(clubs,/>Local<input id="stadium"/);assert.match(portal,/<span>Arbitragem<\/span>/);assert.match(portal,/<span>Local<\/span>/)});
+test('agenda pública continua agrupando modalidade e competição',async()=>{const portal=await read('portal/index.html');assert.match(portal,/sportLabel\(match\.sport\).*match\.competition/)});
