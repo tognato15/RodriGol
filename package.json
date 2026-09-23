@@ -1,8 +1,8 @@
 {
   "name": "rodrigol-2",
-  "version": "2.1.4-standings-sync.2026",
+  "version": "2.1.7-audit-foundation.2026",
   "private": true,
-  "description": "RodriGol Go-Live 1.1 — persistência central e jogos ao vivo multidiários.",
+  "description": "RodriGol — plataforma de cobertura esportiva ao vivo, Studio, portal público e bases estruturais 2026.",
   "type": "module",
   "workspaces": [
     "apps/*",

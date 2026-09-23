@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';
+const root=new URL('../',import.meta.url);
+test('2.1.7 produção não reintroduz partidas/clubes/competições seed',async()=>{const js=await readFile(new URL('public/data-store.js',root),'utf8');assert.match(js,/const seedClubs = \[\];/);assert.match(js,/const seedCompetitions = \[\];/);assert.match(js,/const seedMatches = \[\];/);assert.doesNotMatch(js,/pal-rbb-2026/);});
+test('2.1.7 aliases ambíguos possuem identidades separadas',async()=>{const js=await readFile(new URL('public/data-store.js',root),'utf8');for(const id of ['botafogorj','botafogosp','botafogopb','atleticogo','athleticopr','juventude','juventussp','santacruz','santos','interdelimeira','internacional'])assert.match(js,new RegExp(`${id}:`));});
+test('2.1.7 rodada continua canônica por competição temporada fase grupo e número',async()=>{const js=await readFile(new URL('public/data-store.js',root),'utf8');assert.match(js,/existing\.competitionId!==competitionId/);assert.match(js,/existing\.season/);assert.match(js,/sameStage/);assert.match(js,/sameGroup/);assert.match(js,/roundNumber/);});

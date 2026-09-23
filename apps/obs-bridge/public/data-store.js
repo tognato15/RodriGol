@@ -20,18 +20,12 @@ const remoteWriteChains = new Map();
 let remoteRetryTimer = null;
 let remoteConflictDetected = false;
 
-const seedClubs = [
-  { id: 'palmeiras', name: 'Palmeiras', shortName: 'Palmeiras', abbreviation: 'PAL', city: 'São Paulo', state: 'SP', country: 'Brasil', stadium: 'Allianz Parque', founded: '1914-08-26', primaryColor: '#1f6f43', secondaryColor: '#ffffff', tertiaryColor: '#0d3b24', crestText: 'P', crestDataUrl: '' },
-  { id: 'bragantino', name: 'Red Bull Bragantino', shortName: 'Bragantino', abbreviation: 'RBB', city: 'Bragança Paulista', state: 'SP', country: 'Brasil', stadium: 'Nabi Abi Chedid', founded: '1928-01-08', primaryColor: '#d71920', secondaryColor: '#ffffff', tertiaryColor: '#111111', crestText: 'RB', crestDataUrl: '' },
-  { id: 'flamengo', name: 'Clube de Regatas do Flamengo', shortName: 'Flamengo', abbreviation: 'FLA', city: 'Rio de Janeiro', state: 'RJ', country: 'Brasil', stadium: 'Maracanã', founded: '1895-11-17', primaryColor: '#c9151e', secondaryColor: '#111111', tertiaryColor: '#ffffff', crestText: 'F', crestDataUrl: '' }
-];
+// Produção não possui mais seeds esportivos. Dados estruturais devem vir das bases publicadas/remotas.
+const seedClubs = [];
 
 
-const seedCompetitions = [
-  {id:'brasileirao-a',name:'Campeonato Brasileiro Série A',shortName:'Brasileirão Série A',abbreviation:'BR1',country:'Brasil',continent:'América do Sul',sport:'Futebol',format:'LEAGUE',season:'2026',primaryColor:'#15803d',secondaryColor:'#ffffff',accentColor:'#f59e0b',logoDataUrl:'',priority:1},
-  {id:'amistoso',name:'Amistoso',shortName:'Amistoso',abbreviation:'AMIS',country:'',continent:'',sport:'Futebol',format:'FRIENDLY',season:'2026',primaryColor:'#2563eb',secondaryColor:'#ffffff',accentColor:'#60a5fa',logoDataUrl:'',priority:99}
-];
-export function getCompetitions(){if(!has(COMPETITIONS_KEY)){if(remoteHydrationPending)return [];write(COMPETITIONS_KEY,seedCompetitions.map(({logoDataUrl,...item})=>item));}return parse(COMPETITIONS_KEY,[]).map(item=>({...item,logoDataUrl:competitionLogoCache.get(item.id)||''})).sort((a,b)=>(Number(a.priority)||999)-(Number(b.priority)||999)||String(a.name).localeCompare(String(b.name)));}
+const seedCompetitions = [];
+export function getCompetitions(){if(!has(COMPETITIONS_KEY))return [];return parse(COMPETITIONS_KEY,[]).map(item=>({...item,logoDataUrl:competitionLogoCache.get(item.id)||''})).sort((a,b)=>(Number(a.priority)||999)-(Number(b.priority)||999)||String(a.name).localeCompare(String(b.name)));}
 export function saveCompetitions(items){return write(COMPETITIONS_KEY,items.map(({logoDataUrl,...item})=>item));}
 export async function upsertCompetition(item){const items=getCompetitions();const index=items.findIndex(x=>x.id===item.id);const {logoDataUrl,...record}=item;if(logoDataUrl!==undefined)await setCompetitionLogo(item.id,logoDataUrl);const normalized={...record,logoDataUrl:logoDataUrl||competitionLogoCache.get(item.id)||''};if(index>=0)items[index]=normalized;else items.push(normalized);return saveCompetitions(items);}
 export function deleteCompetition(id){deleteCompetitionLogo(id).catch(()=>{});return saveCompetitions(getCompetitions().filter(x=>x.id!==id));}
@@ -42,9 +36,7 @@ export function standingTableId(competitionId,stageId='',groupId=''){return [com
 export function getStandingTargets(competitionOrId){const competition=typeof competitionOrId==='string'?getCompetition(competitionOrId):competitionOrId;if(!competition)return[];const targets=[];for(const stage of getCompetitionStages(competition)){if(stage.type==='LEAGUE')targets.push({id:standingTableId(competition.id,stage.id),competitionId:competition.id,stageId:stage.id,groupId:'',name:stage.name,label:`${competition.shortName||competition.name} · ${stage.name}`});if(stage.type==='GROUPS')for(const group of stage.groups||[])targets.push({id:standingTableId(competition.id,stage.id,group.id),competitionId:competition.id,stageId:stage.id,groupId:group.id,name:`${stage.name} — ${group.name}`,label:`${competition.shortName||competition.name} · ${stage.name} · ${group.name}`});}return targets;}
 export function findCompetitionByName(name=''){const key=String(name).trim().toLowerCase();return getCompetitions().find(x=>[x.name,x.shortName,x.abbreviation].some(v=>String(v||'').trim().toLowerCase()===key))||null;}
 
-const seedMatches = [
-  { id: 'pal-rbb-2026', competition: 'Brasileirão Série A', season: '2026', round: '9ª Rodada', date: '2026-07-29', time: '20:30', venue: 'Allianz Parque', city: 'São Paulo, SP', referee: 'A definir', homeClubId: 'palmeiras', awayClubId: 'bragantino', status: 'PRE_GAME', notes: '' }
-];
+const seedMatches = [];
 
 function isWideDataKey(key) {
   return String(key || '').startsWith('rodrigol-')
@@ -323,12 +315,12 @@ async function migrateClubCrests(){const stored=parse(CLUBS_KEY,[]);let changed=
 await migrateClubCrests().catch(()=>{});
 
 export function uid(prefix = 'item') { return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`; }
-export function getClubs() { if (!has(CLUBS_KEY)) { if(remoteHydrationPending)return []; write(CLUBS_KEY, seedClubs.map(({crestDataUrl,...club})=>club)); } return parse(CLUBS_KEY, []).map(club=>({...club,crestDataUrl:clubCrestCache.get(club.id)||''})); }
+export function getClubs() { if (!has(CLUBS_KEY)) return []; return parse(CLUBS_KEY, []).map(club=>({...club,crestDataUrl:clubCrestCache.get(club.id)||''})); }
 export function saveClubs(clubs) { return write(CLUBS_KEY, clubs.map(({crestDataUrl,...club})=>club)); }
 export async function upsertClub(club) { const clubs = getClubs(); const index = clubs.findIndex(item => item.id === club.id); const {crestDataUrl,...record}=club;if(crestDataUrl!==undefined)await setClubCrest(club.id,crestDataUrl);if(index>=0)clubs[index]={...record,crestDataUrl:crestDataUrl||clubCrestCache.get(club.id)||''};else clubs.push({...record,crestDataUrl:crestDataUrl||''});return saveClubs(clubs); }
 export function deleteClub(id) { saveClubs(getClubs().filter(item => item.id !== id)); deleteClubCrest(id).catch(()=>{}); saveMatches(getMatches().filter(match => match.homeClubId !== id && match.awayClubId !== id)); }
 export function getClub(id) { return getClubs().find(item => item.id === id) || null; }
-export function getMatches(){if(!has(MATCHES_KEY)){if(remoteHydrationPending)return [];return write(MATCHES_KEY,seedMatches);}return parse(MATCHES_KEY,[]);}
+export function getMatches(){if(!has(MATCHES_KEY))return [];return parse(MATCHES_KEY,[]);}
 export function saveMatches(matches) { return write(MATCHES_KEY, matches); }
 function queueRemoteRecordPatch(kind,id,value){
   const cfg=runtimeForDataSync(); if(!cfg.remoteStorageEnabled)return;
@@ -734,7 +726,7 @@ export async function importCompetitionDataset(dataset={}){
   const competition=dataset.competition||null;
   if(!competition?.id)throw new Error('Dataset sem competição válida.');
   const key=value=>String(value||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'');
-  const canonicalClubAlias=value=>{const k=key(value);const groups={flamengo:['flamengo','clubederegatasdoflamengo','crflamengo','fla'],palmeiras:['palmeiras','sociedadeesportivapalmeiras','sepalmeiras','pal'],bragantino:['bragantino','redbullbragantino','rbbragantino','rbb'],corinthians:['corinthians','sportclubcorinthianspaulista','sccorinthians','cor'],santos:['santos','santosfc','san'],saopaulo:['saopaulo','saopaulofc','sao'],atleticomg:['atleticomg','clubatleticomineiro','cam'],athleticopr:['athleticopr','atleticopr','clubathleticoparanaense','cap'],vasco:['vasco','vascodagama','crvascodagama','vascodagamasaf','vas'],botafogo:['botafogo','botafogorj','botafogodefuteboleregatas','bot'],fluminense:['fluminense','fluminensefc','flu'],internacional:['internacional','sportclubinternacional','sci','int'],gremio:['gremio','gremiofbpa','gre'],bahia:['bahia','esporteclubebahia','ecbahia','bah'],cruzeiro:['cruzeiro','cruzeiroec','cru'],coritiba:['coritiba','coritibafc','coritibasaf','cfc'],vitoria:['vitoria','ecvitoria','vit'],chapecoense:['chapecoense','associacaochapecoensedefutebol','cha'],mirassol:['mirassol','mirassolfc','mir'],remo:['remo','clubedoremo','rem']};for(const [id,aliases] of Object.entries(groups))if(aliases.includes(k))return id;return k;};
+  const canonicalClubAlias=value=>{const k=key(value);const groups={flamengo:['flamengo','clubederegatasdoflamengo','crflamengo','fla'],palmeiras:['palmeiras','sociedadeesportivapalmeiras','sepalmeiras','pal'],bragantino:['bragantino','redbullbragantino','rbbragantino','rbb'],corinthians:['corinthians','sportclubcorinthianspaulista','sccorinthians','cor'],santos:['santos','santosfc','san'],saopaulo:['saopaulo','saopaulofc','sao'],atleticomg:['atleticomg','clubatleticomineiro','cam'],athleticopr:['athleticopr','atleticopr','clubathleticoparanaense','cap'],atleticogo:['atleticogo','atleticogoianiense','atleticoclubegoianiense','acg'],vasco:['vasco','vascodagama','crvascodagama','vascodagamasaf','vas'],botafogorj:['botafogorj','botafogodefuteboleregatas'],botafogosp:['botafogosp','botafogofutebolclubesp','botafogofutebolclube'],botafogopb:['botafogopb','botafogofutebolclubepb'],fluminense:['fluminense','fluminensefc','flu'],internacional:['internacional','internacionalrs','sportclubinternacional','sci'],interdelimeira:['interdelimeira','associacaoatleticainternacionaldelimeira','internacionaldelimeira'],gremio:['gremio','gremiofbpa','gre'],bahia:['bahia','esporteclubebahia','ecbahia','bah'],cruzeiro:['cruzeiro','cruzeiroec','cru'],coritiba:['coritiba','coritibafc','coritibasaf','cfc'],vitoria:['vitoria','ecvitoria','vit'],chapecoense:['chapecoense','associacaochapecoensedefutebol','cha'],mirassol:['mirassol','mirassolfc','mir'],remo:['remo','clubedoremo','rem'],juventude:['juventude','ecjuventude','esporteclubejuventude'],juventussp:['juventussp','clubatleticojuventus','cajuventus'],santacruz:['santacruz','santacruzfc','santacruzfutebolclube']};for(const [id,aliases] of Object.entries(groups))if(aliases.includes(k))return id;return k;};
   const clubs=getClubs(); const clubIdMap=new Map(); let newClubs=0,reusedClubs=0;
   for(const club of incomingClubs){
     const aliases=[club.id,club.name,club.shortName,club.abbreviation].map(canonicalClubAlias).filter(Boolean);
